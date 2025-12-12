@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>โปรแกรมสุ่มชื่อแข่งม้า (Tournament Mode)</title>
+    <!-- ใช้ Font สวยๆ จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #000;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #gameWrapper {
+            width: 100%;
+            max-width: 177.78vh; /* 16/9 aspect ratio */
+            aspect-ratio: 16/9;
+            max-height: 100vh;
+            position: relative;
+            background-color: #1a202c;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* พื้นหลังสนามหญ้า - จะถูกเลื่อนด้วย JS */
+        .track-bg {
+            background-color: #38a169;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px),
+                repeating-linear-gradient(90deg, transparent 0, transparent 99px, rgba(255,255,255,0.1) 100px);
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.6);
+        }
+
+        .finish-line {
+            background-image: 
+                linear-gradient(45deg, #000 25%, transparent 25%), 
+                linear-gradient(-45deg, #000 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #000 75%), 
+                linear-gradient(-45deg, transparent 75%, #000 75%);
+            background-size: 20px 20px;
+            background-color: rgba(255,255,255,0.9);
+        }
+
+        .horse-run {
+            will-change: transform;
+        }
+
+        /* Class สำหรับบังคับโชว์ชื่อ */
+        .force-show-name {
+            opacity: 1 !important;
+            transform: scale(1.1);
+            z-index: 50;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="gameWrapper">
+        <!-- Header -->
+        <header class="bg-gray-900 bg-opacity-90 p-3 shadow-md z-20 border-b border-gray-700 flex-shrink-0">
+            <div class="flex flex-row justify-between items-center px-4">
+                <h1 class="text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-2">
+                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">Tournament</span>
+                </h1>
+                
+                <div class="flex gap-3 items-center text-sm md:text-base">
+                    <div class="flex items-center gap-2 bg-gray-800 rounded px-2 py-1">
+                        <label class="text-gray-300">รางวัล:</label>
+                        <input type="number" id="winnerCount" value="3" min="1" max="50" class="w-12 bg-transparent text-center focus:outline-none font-bold text-yellow-400 border-b border-gray-600">
+                    </div>
+                    <button id="setupBtn" onclick="toggleSetup()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded shadow transition flex items-center gap-1">
+                        ⚙️ <span class="hidden sm:inline">รายชื่อ</span>
+                    </button>
+                    <button id="startBtn" onclick="prepareAndStart()" class="bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded shadow font-bold transition transform hover:scale-105">
+                        🚀 เริ่มแข่ง!
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Race Area -->
+        <main class="flex-1 relative track-bg overflow-hidden" id="trackArea">
+            
+            <!-- World Container -->
+            <div id="worldContainer" class="absolute inset-0 will-change-transform">
+                
+                <!-- Racers Layer -->
+                <div id="racersLayer" class="absolute inset-0 z-10">
+                    <!-- Placeholder -->
+                     <div class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
+                        <div class="text-6xl">🏟️</div>
+                        <div class="text-2xl"></div>
+                        <div class="text-sm"></div>
+                    </div>
+                </div>
+
+                <!-- Finish Line -->
+                <div id="finishLine" class="absolute top-0 bottom-0 w-4 finish-line z-0 shadow-lg hidden"></div>
+                <div id="finishLabel" class="absolute top-1/2 transform -translate-y-1/2 rotate-90 text-white font-bold tracking-widest opacity-30 text-6xl pointer-events-none select-none hidden" style="white-space: nowrap;">
+                    FINISH LINE
+                </div>
+
+            </div>
+            
+        </main>
+        
+        <!-- Status Bar -->
+        <div class="bg-gray-900 text-xs text-gray-400 px-4 py-1 flex justify-between z-20">
+            <span id="racerCountDisplay">ผู้เล่น: 0 คน</span>
+            <span id="distanceDisplay">ระยะทาง: 0%</span>
+        </div>
+    </div>
+
+    <!-- Modal ตั้งค่ารายชื่อ -->
+    <div id="setupModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-lg shadow-2xl border border-gray-600 relative m-4">
+            <button onclick="toggleSetup()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">&times;</button>
+            <h2 class="text-xl font-bold mb-4 text-blue-400">📋 ตั้งค่าผู้เข้าแข่งขัน</h2>
+            <div class="bg-gray-700 p-3 rounded mb-4 flex items-center gap-2">
+                <span class="text-sm">สุ่มชื่อจำนวน:</span>
+                <input type="number" id="genAmount" value="100" class="w-20 px-2 py-1 text-black rounded text-center" min="1" max="1000">
+                <button onclick="generateData()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm transition">สร้างเลย</button>
+            </div>
+            <textarea id="nameList" class="w-full h-48 p-3 bg-gray-900 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none font-mono" placeholder="รายชื่อ..."></textarea>
+            <div class="flex justify-between items-center mt-4">
+                <span class="text-xs text-gray-500" id="lineCount">0 รายชื่อ</span>
+                <button onclick="toggleSetup()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg">บันทึกและปิด</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="absolute inset-0 z-50 hidden flex items-center justify-center pointer-events-none">
+        <div class="bg-white text-gray-900 rounded-xl w-full max-w-md shadow-2xl transform scale-90 opacity-0 transition-all duration-300 pointer-events-auto border-4 border-yellow-400 overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="bg-red-600 text-white p-4 text-center font-bold text-2xl shadow-md">🏆 ผลการแข่งขัน</div>
+            <ul id="winnerList" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 text-base"></ul>
+            <div class="p-4 bg-gray-100 border-t flex flex-col gap-2">
+                <button onclick="nextRound()" class="bg-blue-600 hover:bg-blue-500 text-white text-lg px-6 py-3 rounded-lg font-bold shadow-lg transition hover:scale-105 flex items-center justify-center gap-2">
+                    ⏭️ รอบต่อไป (คัดผู้ชนะออก)
+                </button>
+                <button onclick="closeResult()" class="text-gray-500 hover:text-gray-800 text-sm py-1 font-semibold underline">
+                    ปิด (คงรายชื่อเดิมไว้)
+                </button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Config ---
+    const avatars = ['🐎', '🦄', '🐆', '🐅', '🦓', '🐕', '🐇', '🏇', '🚴', '🏎️', '🛵', '🏃', '🦖', '🐂'];
+    const colors = [
+        'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 
+        'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500'
+    ];
+    const TRACK_MULTIPLIER = 4;
+
+    // --- State ---
+    let isRacing = false;
+    let racers = [];
+    let winners = [];
+    let raceInterval = null;
+    let targetWinners = 3;
+    let finishLineX = 0;
+    let viewportWidth = 0;
+    let viewportHeight = 0;
+    let frameTick = 0;
+
+    // --- DOM Elements ---
+    const setupModal = document.getElementById('setupModal');
+    const resultModal = document.getElementById('resultModal');
+    const racersLayer = document.getElementById('racersLayer');
+    const worldContainer = document.getElementById('worldContainer');
+    const trackArea = document.getElementById('trackArea');
+    const finishLine = document.getElementById('finishLine');
+    const finishLabel = document.getElementById('finishLabel');
+    const nameListInput = document.getElementById('nameList');
+    const startBtn = document.getElementById('startBtn');
+    const distanceDisplay = document.getElementById('distanceDisplay');
+    const racerCountDisplay = document.getElementById('racerCountDisplay');
+    const lineCountLabel = document.getElementById('lineCount');
+
+    // --- Init ---
+    generateData();
+    updateLineCount();
+    nameListInput.addEventListener('input', updateLineCount);
+
+    function toggleSetup() {
+        if (isRacing) return;
+        setupModal.classList.toggle('hidden');
+    }
+
+    function generateData() {
+        const count = parseInt(document.getElementById('genAmount').value) || 100;
+        const dummyNames = [];
+        for (let i = 1; i <= count; i++) {
+            dummyNames.push(`P${i.toString().padStart(3, '0')}`);
+        }
+        nameListInput.value = dummyNames.join('\n');
+        updateLineCount();
+    }
+
+    function updateLineCount() {
+        const lines = nameListInput.value.split('\n').filter(n => n.trim()).length;
+        lineCountLabel.innerText = `${lines} รายชื่อ`;
+        racerCountDisplay.innerText = `ผู้เล่น: ${lines} คน`;
+    }
+
+    function prepareAndStart() {
+        if (isRacing) return;
+        const rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
+        if (rawNames.length === 0) { alert("ไม่เหลือรายชื่อผู้เข้าแข่งขันแล้ว!"); toggleSetup(); return; }
+
+        targetWinners = Math.min(parseInt(document.getElementById('winnerCount').value), rawNames.length);
+
+        viewportWidth = trackArea.clientWidth;
+        viewportHeight = trackArea.clientHeight;
+        finishLineX = viewportWidth * TRACK_MULTIPLIER;
+
+        setupTrack(rawNames);
+        
+        startBtn.disabled = true;
+        startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        startBtn.innerText = "กำลังเข้าที่...";
+        
+        setTimeout(() => {
+            isRacing = true;
+            startBtn.innerText = "กำลังแข่งขัน!";
+            startRaceLoop();
+        }, 1000);
+    }
+
+    function setupTrack(names) {
+        racersLayer.innerHTML = '';
+        racers = [];
+        winners = [];
+        worldContainer.style.transform = `translateX(0px)`;
+        trackArea.style.backgroundPositionX = `0px`;
+
+        finishLine.style.display = 'block';
+        finishLine.style.left = `${finishLineX}px`;
+        finishLabel.style.display = 'block';
+        finishLabel.style.left = `${finishLineX - 40}px`;
+
+        const totalRacers = names.length;
+        
+        let avatarSize = "text-3xl";
+        let labelSize = "text-xs";
+        let iconOffsetY = -20;
+        
+        if (totalRacers > 150) {
+            avatarSize = "text-lg"; labelSize = "text-[8px]"; iconOffsetY = -10;
+        } else if (totalRacers > 50) {
+            avatarSize = "text-2xl"; labelSize = "text-[10px]"; iconOffsetY = -15;
+        }
+
+        names.forEach((name, index) => {
+            const progress = index / (totalRacers - 1 || 1); 
+            const baseTop = 5 + (progress * 85);
+            const randomJitter = (Math.random() * 2) - 1;
+            const finalTop = Math.max(2, Math.min(95, baseTop + randomJitter));
+            
+            const el = document.createElement('div');
+            el.className = "absolute left-0 flex flex-col items-center group horse-run select-none";
+            el.style.top = `${finalTop}%`;
+            el.style.zIndex = Math.floor(finalTop * 10); 
+            
+            const avatarChar = avatars[index % avatars.length];
+            const colorClass = colors[index % colors.length];
+
+            el.innerHTML = `
+                <div class="${avatarSize} transform -scale-x-100 filter drop-shadow-sm leading-none relative" style="top: ${iconOffsetY}px">
+                    ${avatarChar}
+                </div>
+                <div class="${colorClass} text-white ${labelSize} px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity absolute -top-4 whitespace-nowrap shadow-sm border border-black border-opacity-20 z-20">
+                    ${name}
+                </div>
+            `;
+            
+            const labelEl = el.querySelector('div:last-child');
+            if(totalRacers < 30) labelEl.classList.remove('opacity-0');
+
+            racersLayer.appendChild(el);
+
+            racers.push({
+                name: name,
+                element: el,
+                labelElement: labelEl,
+                position: 0,
+                yPercent: finalTop,
+                currentSpeed: 0,
+                targetSpeed: Math.random() * 5 + 5,
+                maxSpeed: Math.random() * 8 + 8,
+                aggression: Math.random() * 0.05 + 0.01,
+                finished: false,
+                wobble: Math.random() * 10,
+            });
+        });
+    }
+
+    function startRaceLoop() {
+        raceInterval = setInterval(() => {
+            frameTick++;
+            let activeCount = 0;
+            let leaderPosition = 0;
+
+            const shouldCheckProximity = (frameTick % 5 === 0);
+            let racerPositions = [];
+            if (shouldCheckProximity && racers.length > 30) { 
+                 racerPositions = racers.map(r => ({ x: r.position, y: (r.yPercent / 100) * viewportHeight }));
+            }
+
+            racers.forEach((racer, index) => {
+                if (racer.finished) {
+                    leaderPosition = Math.max(leaderPosition, racer.position);
+                    return;
+                }
+                
+                activeCount++;
+
+                if (Math.random() < racer.aggression) {
+                    const progress = racer.position / finishLineX;
+                    const fatigue = Math.random() > 0.7 ? 0.5 : 1;
+                    const sprintBonus = (progress > 0.8) ? 1.5 : 1;
+                    racer.targetSpeed = (Math.random() * racer.maxSpeed * fatigue * sprintBonus);
+                    if(racer.targetSpeed < 2) racer.targetSpeed = 2 + Math.random();
+                }
+
+                racer.currentSpeed += (racer.targetSpeed - racer.currentSpeed) * 0.05;
+                const speedScale = viewportWidth / 1200; 
+                racer.position += racer.currentSpeed * speedScale;
+
+                racer.wobble += 0.5 + (racer.currentSpeed * 0.05);
+                const jumpY = Math.abs(Math.sin(racer.wobble)) * -3;
+                racer.element.style.transform = `translate(${racer.position}px, ${jumpY}px)`;
+
+                if (shouldCheckProximity && racers.length > 30) {
+                    let isIsolated = true;
+                    const myX = racer.position;
+                    const myY = (racer.yPercent / 100) * viewportHeight;
+                    for (let j = 0; j < racerPositions.length; j++) {
+                        if (index === j) continue;
+                        const other = racerPositions[j];
+                        const dx = Math.abs(myX - other.x);
+                        const dy = Math.abs(myY - other.y);
+                        if (dx < 60 && dy < 60 && (dx*dx + dy*dy) < 3600) {
+                            isIsolated = false;
+                            break;
+                        }
+                    }
+                    if (isIsolated) {
+                        racer.labelElement.classList.remove('opacity-0');
+                        racer.labelElement.classList.add('force-show-name'); 
+                    } else {
+                        racer.labelElement.classList.remove('force-show-name');
+                        racer.labelElement.classList.add('opacity-0');
+                    }
+                }
+
+                if (racer.position >= finishLineX) {
+                    racer.position = finishLineX;
+                    racer.finished = true;
+                    racer.labelElement.classList.remove('opacity-0');
+                    racer.labelElement.classList.add('force-show-name'); 
+
+                    if (winners.length < targetWinners) {
+                        winners.push(racer);
+                        racer.element.classList.add('brightness-125', 'scale-125', 'z-50');
+                        racer.element.innerHTML += `<div class="absolute -top-8 text-2xl animate-bounce">🚩</div>`;
+                    }
+                }
+
+                leaderPosition = Math.max(leaderPosition, racer.position);
+            });
+
+            let cameraX = leaderPosition - (viewportWidth * 0.6);
+            if (cameraX < 0) cameraX = 0;
+            if (cameraX > finishLineX - viewportWidth + 100) { 
+                cameraX = finishLineX - viewportWidth + 100; 
+            }
+            worldContainer.style.transform = `translateX(${-cameraX}px)`;
+            trackArea.style.backgroundPositionX = `${-cameraX}px`;
+
+            const progressPct = Math.min(100, Math.round((leaderPosition / finishLineX) * 100));
+            distanceDisplay.innerText = `ระยะทาง: ${progressPct}%`;
+
+            if (winners.length >= targetWinners || activeCount === 0) {
+                clearInterval(raceInterval);
+                finishGame();
+            }
+
+        }, 30);
+    }
+
+    function finishGame() {
+        isRacing = false;
+        startBtn.disabled = false;
+        startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        startBtn.innerText = "🚀 เริ่มแข่งใหม่";
+
+        const list = document.getElementById('winnerList');
+        list.innerHTML = '';
+        winners.forEach((w, i) => {
+            const rank = i + 1;
+            let badge = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-3 p-2 bg-white border-b hover:bg-gray-50";
+            li.innerHTML = `<div class="text-xl w-8 text-center font-bold text-gray-700">${badge}</div><div class="font-bold text-gray-800 flex-1">${w.name}</div>`;
+            list.appendChild(li);
+        });
+
+        const modal = document.getElementById('resultModal');
+        modal.classList.remove('hidden');
+        void modal.offsetWidth; 
+        modal.querySelector('div').classList.remove('scale-90', 'opacity-0');
+        modal.querySelector('div').classList.add('scale-100', 'opacity-100');
+    }
+
+    // ฟังก์ชันใหม่: คัดผู้ชนะออกแล้วเริ่มรอบใหม่
+    function nextRound() {
+        // 1. อ่านรายชื่อทั้งหมดตอนนี้
+        const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
+        
+        // 2. รายชื่อผู้ชนะรอบนี้
+        const winnerNames = winners.map(w => w.name);
+        
+        // 3. กรองชื่อผู้ชนะออก
+        const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
+        
+        if (nextRoundList.length === 0) {
+            alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขัน)");
+            closeResult();
+            nameListInput.value = "";
+            updateLineCount();
+            return;
+        }
+
+        // 4. อัปเดตรายชื่อใน Textarea
+        nameListInput.value = nextRoundList.join('\n');
+        updateLineCount();
+
+        // 5. เปลี่ยนปุ่มเริ่มเป็นรอบถัดไป
+        startBtn.innerText = "🚀 เริ่มรอบถัดไป";
+        
+        // 6. ปิดหน้าต่างผล
+        closeResult();
+    }
+
+    function closeResult() {
+        const modal = document.getElementById('resultModal');
+        modal.querySelector('div').classList.remove('scale-100', 'opacity-100');
+        modal.querySelector('div').classList.add('scale-90', 'opacity-0');
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    window.addEventListener('resize', () => {
+        if(!isRacing && trackArea.clientWidth) {
+            viewportWidth = trackArea.clientWidth;
+            viewportHeight = trackArea.clientHeight;
+        }
+    });
+
+</script>
+</body>
+</html>
