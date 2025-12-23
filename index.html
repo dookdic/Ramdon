@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมสุ่มชื่อแข่งม้า (Tournament Mode)</title>
+    <title>โปรแกรมสุ่มชื่อแข่งม้า (Dust Effect)</title>
     <!-- ใช้ Font สวยๆ จาก Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -34,12 +34,14 @@
             overflow: hidden;
         }
 
-        /* พื้นหลังสนามหญ้า - จะถูกเลื่อนด้วย JS */
+        /* พื้นหลังสนามหญ้า */
         .track-bg {
             background-color: #38a169;
             background-image: 
+                url("data:image/svg+xml,%3Csvg width='80' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='99' x2='50' y2='99' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3C/svg%3E"),
                 radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px),
                 repeating-linear-gradient(90deg, transparent 0, transparent 99px, rgba(255,255,255,0.1) 100px);
+            background-size: auto 10%, 20px 20px, auto auto;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.6);
         }
 
@@ -57,12 +59,54 @@
             will-change: transform;
         }
 
-        /* Class สำหรับบังคับโชว์ชื่อ */
         .force-show-name {
             opacity: 1 !important;
             transform: scale(1.1);
             z-index: 50;
         }
+
+        /* --- Dust Effect Styles --- */
+        .dust-container {
+            position: absolute;
+            left: -15px; /* อยู่ด้านหลัง */
+            bottom: -5px;
+            width: 40px;
+            height: 30px;
+            pointer-events: none;
+            z-index: -1; /* อยู่หลังตัวม้า */
+            opacity: 0;
+            transition: opacity 0.9s ease-out;
+        }
+        
+        /* เมื่อ Active จะแสดงและเริ่ม Animation */
+        .dust-container.active {
+            opacity: 1;
+        }
+
+        .dust-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: rgba(220, 220, 220, 0.6); /* สีฝุ่นขาวเทา */
+            border-radius: 50%;
+            opacity: 0;
+        }
+
+        /* Animation loop เมื่อแม่มัน active */
+        .dust-container.active .dust-particle {
+            animation: dust-puff 0.5s infinite linear;
+        }
+
+        /* กระจายตำแหน่งและเวลาของฝุ่น 3 ก้อน */
+        .dust-container.active .dust-particle:nth-child(1) { left: 25px; bottom: 5px; animation-delay: 0s; transform: scale(0.8); }
+        .dust-container.active .dust-particle:nth-child(2) { left: 15px; bottom: 2px; animation-delay: 0.15s; transform: scale(1.2); }
+        .dust-container.active .dust-particle:nth-child(3) { left: 5px; bottom: 8px; animation-delay: 0.3s; transform: scale(0.6); }
+
+        @keyframes dust-puff {
+            0% { transform: scale(0.5) translate(0, 0); opacity: 0.7; }
+            100% { transform: scale(2.5) translate(-20px, -15px); opacity: 0; }
+        }
+
     </style>
 </head>
 <body>
@@ -92,38 +136,27 @@
 
         <!-- Main Race Area -->
         <main class="flex-1 relative track-bg overflow-hidden" id="trackArea">
-            
-            <!-- World Container -->
             <div id="worldContainer" class="absolute inset-0 will-change-transform">
-                
-                <!-- Racers Layer -->
+                <div id="markersLayer" class="absolute inset-0 z-0"></div>
                 <div id="racersLayer" class="absolute inset-0 z-10">
-                    <!-- Placeholder -->
                      <div class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
-                        <div class="text-6xl">🏟️</div>
-                        <div class="text-2xl"></div>
-                        <div class="text-sm"></div>
+                   
                     </div>
                 </div>
-
-                <!-- Finish Line -->
                 <div id="finishLine" class="absolute top-0 bottom-0 w-4 finish-line z-0 shadow-lg hidden"></div>
                 <div id="finishLabel" class="absolute top-1/2 transform -translate-y-1/2 rotate-90 text-white font-bold tracking-widest opacity-30 text-6xl pointer-events-none select-none hidden" style="white-space: nowrap;">
                     FINISH LINE
                 </div>
-
             </div>
-            
         </main>
         
-        <!-- Status Bar -->
         <div class="bg-gray-900 text-xs text-gray-400 px-4 py-1 flex justify-between z-20">
             <span id="racerCountDisplay">ผู้เล่น: 0 คน</span>
-            <span id="distanceDisplay">ระยะทาง: 0%</span>
+            <span id="distanceDisplay">ระยะทาง: 0 M</span>
         </div>
     </div>
 
-    <!-- Modal ตั้งค่ารายชื่อ -->
+    <!-- Modals -->
     <div id="setupModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-gray-800 p-6 rounded-lg w-full max-w-lg shadow-2xl border border-gray-600 relative m-4">
             <button onclick="toggleSetup()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">&times;</button>
@@ -141,7 +174,6 @@
         </div>
     </div>
 
-    <!-- Result Modal -->
     <div id="resultModal" class="absolute inset-0 z-50 hidden flex items-center justify-center pointer-events-none">
         <div class="bg-white text-gray-900 rounded-xl w-full max-w-md shadow-2xl transform scale-90 opacity-0 transition-all duration-300 pointer-events-auto border-4 border-yellow-400 overflow-hidden flex flex-col max-h-[80vh]">
             <div class="bg-red-600 text-white p-4 text-center font-bold text-2xl shadow-md">🏆 ผลการแข่งขัน</div>
@@ -158,7 +190,6 @@
     </div>
 
 <script>
-    // --- Config ---
     const avatars = ['🐎', '🦄', '🐆', '🐅', '🦓', '🐕', '🐇', '🏇', '🚴', '🏎️', '🛵', '🏃', '🦖', '🐂'];
     const colors = [
         'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 
@@ -166,7 +197,6 @@
     ];
     const TRACK_MULTIPLIER = 4;
 
-    // --- State ---
     let isRacing = false;
     let racers = [];
     let winners = [];
@@ -177,10 +207,10 @@
     let viewportHeight = 0;
     let frameTick = 0;
 
-    // --- DOM Elements ---
     const setupModal = document.getElementById('setupModal');
     const resultModal = document.getElementById('resultModal');
     const racersLayer = document.getElementById('racersLayer');
+    const markersLayer = document.getElementById('markersLayer');
     const worldContainer = document.getElementById('worldContainer');
     const trackArea = document.getElementById('trackArea');
     const finishLine = document.getElementById('finishLine');
@@ -191,7 +221,6 @@
     const racerCountDisplay = document.getElementById('racerCountDisplay');
     const lineCountLabel = document.getElementById('lineCount');
 
-    // --- Init ---
     generateData();
     updateLineCount();
     nameListInput.addEventListener('input', updateLineCount);
@@ -243,6 +272,7 @@
 
     function setupTrack(names) {
         racersLayer.innerHTML = '';
+        markersLayer.innerHTML = '';
         racers = [];
         winners = [];
         worldContainer.style.transform = `translateX(0px)`;
@@ -253,8 +283,28 @@
         finishLabel.style.display = 'block';
         finishLabel.style.left = `${finishLineX - 40}px`;
 
+        for (let i = 1; i <= 9; i++) {
+            const leftPos = finishLineX * (i / 10);
+            const line = document.createElement('div');
+            line.className = 'absolute top-0 bottom-0 border-l-2 border-dashed border-white border-opacity-20 pointer-events-none';
+            line.style.left = `${leftPos}px`;
+            
+            const labelTop = document.createElement('div');
+            labelTop.className = 'absolute top-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
+            labelTop.style.left = `${leftPos}px`;
+            labelTop.innerText = `${i * 10}M`;
+
+            const labelBottom = document.createElement('div');
+            labelBottom.className = 'absolute bottom-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
+            labelBottom.style.left = `${leftPos}px`;
+            labelBottom.innerText = `${i * 10}M`;
+
+            markersLayer.appendChild(line);
+            markersLayer.appendChild(labelTop);
+            markersLayer.appendChild(labelBottom);
+        }
+
         const totalRacers = names.length;
-        
         let avatarSize = "text-3xl";
         let labelSize = "text-xs";
         let iconOffsetY = -20;
@@ -279,16 +329,23 @@
             const avatarChar = avatars[index % avatars.length];
             const colorClass = colors[index % colors.length];
 
+            // Added dust-container in HTML
             el.innerHTML = `
-                <div class="${avatarSize} transform -scale-x-100 filter drop-shadow-sm leading-none relative" style="top: ${iconOffsetY}px">
+                <div class="${avatarSize} transform -scale-x-100 filter drop-shadow-sm leading-none relative z-10" style="top: ${iconOffsetY}px">
                     ${avatarChar}
                 </div>
                 <div class="${colorClass} text-white ${labelSize} px-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity absolute -top-4 whitespace-nowrap shadow-sm border border-black border-opacity-20 z-20">
                     ${name}
                 </div>
+                <div class="dust-container">
+                    <div class="dust-particle"></div>
+                    <div class="dust-particle"></div>
+                    <div class="dust-particle"></div>
+                </div>
             `;
             
-            const labelEl = el.querySelector('div:last-child');
+            const labelEl = el.querySelector('div:nth-child(2)');
+            const dustEl = el.querySelector('.dust-container');
             if(totalRacers < 30) labelEl.classList.remove('opacity-0');
 
             racersLayer.appendChild(el);
@@ -297,6 +354,7 @@
                 name: name,
                 element: el,
                 labelElement: labelEl,
+                dustElement: dustEl,
                 position: 0,
                 yPercent: finalTop,
                 currentSpeed: 0,
@@ -337,7 +395,17 @@
                     if(racer.targetSpeed < 2) racer.targetSpeed = 2 + Math.random();
                 }
 
+                // Smooth speed transition
                 racer.currentSpeed += (racer.targetSpeed - racer.currentSpeed) * 0.05;
+
+                // Dust Logic: ถ้า Target Speed มากกว่า Current Speed แสดงว่ากำลังพยายามเร่ง (และต้องมีความเร็วพอสมควร)
+                // Threshold +0.5 เพื่อกันกระพริบ
+                if (racer.targetSpeed > racer.currentSpeed + 0.5 && racer.currentSpeed > 3) {
+                    racer.dustElement.classList.add('active');
+                } else {
+                    racer.dustElement.classList.remove('active');
+                }
+
                 const speedScale = viewportWidth / 1200; 
                 racer.position += racer.currentSpeed * speedScale;
 
@@ -371,6 +439,7 @@
                 if (racer.position >= finishLineX) {
                     racer.position = finishLineX;
                     racer.finished = true;
+                    racer.dustElement.classList.remove('active'); // Stop dust when finished
                     racer.labelElement.classList.remove('opacity-0');
                     racer.labelElement.classList.add('force-show-name'); 
 
@@ -427,15 +496,9 @@
         modal.querySelector('div').classList.add('scale-100', 'opacity-100');
     }
 
-    // ฟังก์ชันใหม่: คัดผู้ชนะออกแล้วเริ่มรอบใหม่
     function nextRound() {
-        // 1. อ่านรายชื่อทั้งหมดตอนนี้
         const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
-        
-        // 2. รายชื่อผู้ชนะรอบนี้
         const winnerNames = winners.map(w => w.name);
-        
-        // 3. กรองชื่อผู้ชนะออก
         const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
         
         if (nextRoundList.length === 0) {
@@ -446,14 +509,9 @@
             return;
         }
 
-        // 4. อัปเดตรายชื่อใน Textarea
         nameListInput.value = nextRoundList.join('\n');
         updateLineCount();
-
-        // 5. เปลี่ยนปุ่มเริ่มเป็นรอบถัดไป
         startBtn.innerText = "🚀 เริ่มรอบถัดไป";
-        
-        // 6. ปิดหน้าต่างผล
         closeResult();
     }
 
