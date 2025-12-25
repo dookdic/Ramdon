@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมสุ่มชื่อแข่งม้า (Fireworks & Sound)</title>
+    <title>โปรแกรมสุ่มชื่อแข่งม้า (Rubber Banding)</title>
     <!-- ใช้ Font สวยๆ จาก Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -23,12 +24,13 @@
 
         #gameWrapper {
             width: 100%;
-            max-width: 177.78vh; /* 16/9 aspect ratio */
+            max-width: 177.78vh;
+            /* 16/9 aspect ratio */
             aspect-ratio: 16/9;
             max-height: 100vh;
             position: relative;
             background-color: #1a202c;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -37,22 +39,22 @@
         /* พื้นหลังสนามหญ้า */
         .track-bg {
             background-color: #38a169;
-            background-image: 
+            background-image:
                 url("data:image/svg+xml,%3Csvg width='80' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='99' x2='50' y2='99' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3C/svg%3E"),
-                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.05) 1px, transparent 1px),
-                repeating-linear-gradient(90deg, transparent 0, transparent 99px, rgba(255,255,255,0.1) 100px);
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                repeating-linear-gradient(90deg, transparent 0, transparent 99px, rgba(255, 255, 255, 0.1) 100px);
             background-size: auto 10%, 20px 20px, auto auto;
-            box-shadow: inset 0 0 50px rgba(0,0,0,0.6);
+            box-shadow: inset 0 0 50px rgba(0, 0, 0, 0.6);
         }
 
         .finish-line {
-            background-image: 
-                linear-gradient(45deg, #000 25%, transparent 25%), 
-                linear-gradient(-45deg, #000 25%, transparent 25%), 
-                linear-gradient(45deg, transparent 75%, #000 75%), 
+            background-image:
+                linear-gradient(45deg, #000 25%, transparent 25%),
+                linear-gradient(-45deg, #000 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #000 75%),
                 linear-gradient(-45deg, transparent 75%, #000 75%);
             background-size: 20px 20px;
-            background-color: rgba(255,255,255,0.9);
+            background-color: rgba(255, 255, 255, 0.9);
         }
 
         .horse-run {
@@ -68,16 +70,18 @@
         /* --- Dust Effect Styles --- */
         .dust-container {
             position: absolute;
-            left: -15px; /* อยู่ด้านหลัง */
+            left: -15px;
+            /* อยู่ด้านหลัง */
             bottom: -5px;
             width: 40px;
             height: 30px;
             pointer-events: none;
-            z-index: -1; /* อยู่หลังตัวม้า */
+            z-index: -1;
+            /* อยู่หลังตัวม้า */
             opacity: 0;
             transition: opacity 0.9s ease-out;
         }
-        
+
         .dust-container.active {
             opacity: 1;
         }
@@ -95,13 +99,37 @@
             animation: dust-puff 0.5s infinite linear;
         }
 
-        .dust-container.active .dust-particle:nth-child(1) { left: 25px; bottom: 5px; animation-delay: 0s; transform: scale(0.8); }
-        .dust-container.active .dust-particle:nth-child(2) { left: 15px; bottom: 2px; animation-delay: 0.15s; transform: scale(1.2); }
-        .dust-container.active .dust-particle:nth-child(3) { left: 5px; bottom: 8px; animation-delay: 0.3s; transform: scale(0.6); }
+        .dust-container.active .dust-particle:nth-child(1) {
+            left: 25px;
+            bottom: 5px;
+            animation-delay: 0s;
+            transform: scale(0.8);
+        }
+
+        .dust-container.active .dust-particle:nth-child(2) {
+            left: 15px;
+            bottom: 2px;
+            animation-delay: 0.15s;
+            transform: scale(1.2);
+        }
+
+        .dust-container.active .dust-particle:nth-child(3) {
+            left: 5px;
+            bottom: 8px;
+            animation-delay: 0.3s;
+            transform: scale(0.6);
+        }
 
         @keyframes dust-puff {
-            0% { transform: scale(0.5) translate(0, 0); opacity: 0.7; }
-            100% { transform: scale(2.5) translate(-20px, -15px); opacity: 0; }
+            0% {
+                transform: scale(0.5) translate(0, 0);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: scale(2.5) translate(-20px, -15px);
+                opacity: 0;
+            }
         }
 
         /* --- Fireworks Canvas --- */
@@ -112,11 +140,11 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
-            z-index: 40; /* แก้ไข: ลด Z-Index ลงให้ต่ำกว่า Modal (z-50) */
+            z-index: 40;
         }
-
     </style>
 </head>
+
 <body>
 
     <!-- Canvas สำหรับพลุ -->
@@ -127,18 +155,22 @@
         <header class="bg-gray-900 bg-opacity-90 p-3 shadow-md z-20 border-b border-gray-700 flex-shrink-0">
             <div class="flex flex-row justify-between items-center px-4">
                 <h1 class="text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-2">
-                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">Tournament</span>
+                    🏁 <span class="hidden md:inline">Long Track Race</span> <span
+                        class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">Catch-up Mode</span>
                 </h1>
-                
+
                 <div class="flex gap-3 items-center text-sm md:text-base">
                     <div class="flex items-center gap-2 bg-gray-800 rounded px-2 py-1">
                         <label class="text-gray-300">รางวัล:</label>
-                        <input type="number" id="winnerCount" value="3" min="1" max="50" class="w-12 bg-transparent text-center focus:outline-none font-bold text-yellow-400 border-b border-gray-600">
+                        <input type="number" id="winnerCount" value="3" min="1" max="50"
+                            class="w-12 bg-transparent text-center focus:outline-none font-bold text-yellow-400 border-b border-gray-600">
                     </div>
-                    <button id="setupBtn" onclick="toggleSetup()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded shadow transition flex items-center gap-1">
+                    <button id="setupBtn" onclick="toggleSetup()"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded shadow transition flex items-center gap-1">
                         ⚙️ <span class="hidden sm:inline">รายชื่อ</span>
                     </button>
-                    <button id="startBtn" onclick="prepareAndStart()" class="bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded shadow font-bold transition transform hover:scale-105">
+                    <button id="startBtn" onclick="prepareAndStart()"
+                        class="bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded shadow font-bold transition transform hover:scale-105">
                         🚀 เริ่มแข่ง!
                     </button>
                 </div>
@@ -150,17 +182,20 @@
             <div id="worldContainer" class="absolute inset-0 will-change-transform">
                 <div id="markersLayer" class="absolute inset-0 z-0"></div>
                 <div id="racersLayer" class="absolute inset-0 z-10">
-                     <div class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
-                        
+                    <div
+                        class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
+
                     </div>
                 </div>
                 <div id="finishLine" class="absolute top-0 bottom-0 w-4 finish-line z-0 shadow-lg hidden"></div>
-                <div id="finishLabel" class="absolute top-1/2 transform -translate-y-1/2 rotate-90 text-white font-bold tracking-widest opacity-30 text-6xl pointer-events-none select-none hidden" style="white-space: nowrap;">
+                <div id="finishLabel"
+                    class="absolute top-1/2 transform -translate-y-1/2 rotate-90 text-white font-bold tracking-widest opacity-30 text-6xl pointer-events-none select-none hidden"
+                    style="white-space: nowrap;">
                     FINISH LINE
                 </div>
             </div>
         </main>
-        
+
         <div class="bg-gray-900 text-xs text-gray-400 px-4 py-1 flex justify-between z-20">
             <span id="racerCountDisplay">ผู้เล่น: 0 คน</span>
             <span id="distanceDisplay">ระยะทาง: 0 M</span>
@@ -168,330 +203,327 @@
     </div>
 
     <!-- Modals -->
-    <div id="setupModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
+    <div id="setupModal"
+        class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
         <div class="bg-gray-800 p-6 rounded-lg w-full max-w-lg shadow-2xl border border-gray-600 relative m-4">
-            <button onclick="toggleSetup()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">&times;</button>
+            <button onclick="toggleSetup()"
+                class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">&times;</button>
             <h2 class="text-xl font-bold mb-4 text-blue-400">📋 ตั้งค่าผู้เข้าแข่งขัน</h2>
             <div class="bg-gray-700 p-3 rounded mb-4 flex items-center gap-2">
                 <span class="text-sm">สุ่มชื่อจำนวน:</span>
-                <input type="number" id="genAmount" value="100" class="w-20 px-2 py-1 text-black rounded text-center" min="1" max="1000">
-                <button onclick="generateData()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm transition">สร้างเลย</button>
+                <input type="number" id="genAmount" value="100" class="w-20 px-2 py-1 text-black rounded text-center"
+                    min="1" max="1000">
+                <button onclick="generateData()"
+                    class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm transition">สร้างเลย</button>
             </div>
-            <textarea id="nameList" class="w-full h-48 p-3 bg-gray-900 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none font-mono" placeholder="รายชื่อ..."></textarea>
+            <textarea id="nameList"
+                class="w-full h-48 p-3 bg-gray-900 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none font-mono"
+                placeholder="รายชื่อ..."></textarea>
             <div class="flex justify-between items-center mt-4">
                 <span class="text-xs text-gray-500" id="lineCount">0 รายชื่อ</span>
-                <button onclick="toggleSetup()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg">บันทึกและปิด</button>
+                <button onclick="toggleSetup()"
+                    class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg">บันทึกและปิด</button>
             </div>
         </div>
     </div>
 
     <div id="resultModal" class="absolute inset-0 z-50 hidden flex items-center justify-center pointer-events-none">
-        <div class="bg-white text-gray-900 rounded-xl w-full max-w-md shadow-2xl transform scale-90 opacity-0 transition-all duration-300 pointer-events-auto border-4 border-yellow-400 overflow-hidden flex flex-col max-h-[80vh]">
+        <div
+            class="bg-white text-gray-900 rounded-xl w-full max-w-md shadow-2xl transform scale-90 opacity-0 transition-all duration-300 pointer-events-auto border-4 border-yellow-400 overflow-hidden flex flex-col max-h-[80vh]">
             <div class="bg-red-600 text-white p-4 text-center font-bold text-2xl shadow-md">🏆 ผลการแข่งขัน</div>
             <ul id="winnerList" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 text-base"></ul>
             <div class="p-4 bg-gray-100 border-t flex flex-col gap-2">
-                <button onclick="nextRound()" class="bg-blue-600 hover:bg-blue-500 text-white text-lg px-6 py-3 rounded-lg font-bold shadow-lg transition hover:scale-105 flex items-center justify-center gap-2">
+                <button onclick="nextRound()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white text-lg px-6 py-3 rounded-lg font-bold shadow-lg transition hover:scale-105 flex items-center justify-center gap-2">
                     ⏭️ รอบต่อไป (คัดผู้ชนะออก)
                 </button>
-                <button onclick="closeResult()" class="text-gray-500 hover:text-gray-800 text-sm py-1 font-semibold underline">
+                <button onclick="closeResult()"
+                    class="text-gray-500 hover:text-gray-800 text-sm py-1 font-semibold underline">
                     ปิด (คงรายชื่อเดิมไว้)
                 </button>
             </div>
         </div>
     </div>
 
-<script>
-    const avatars = ['🐎', '🦄', '🐆', '🐅', '🦓', '🐕', '🐇', '🏇', '🚴', '🏎️', '🛵', '🏃', '🦖', '🐂'];
-    const colors = [
-        'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 
-        'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500'
-    ];
-    const TRACK_MULTIPLIER = 4;
+    <script>
+        const avatars = ['🐎', '🦄', '🐆', '🐅', '🦓', '🐕', '🐇', '🏇', '🚴', '🏎️', '🛵', '🏃', '🦖', '🐂'];
+        const colors = [
+            'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500',
+            'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500'
+        ];
+        const TRACK_MULTIPLIER = 4;
 
-    let isRacing = false;
-    let racers = [];
-    let winners = [];
-    let raceInterval = null;
-    let targetWinners = 3;
-    let finishLineX = 0;
-    let viewportWidth = 0;
-    let viewportHeight = 0;
-    let frameTick = 0;
+        let isRacing = false;
+        let racers = [];
+        let winners = [];
+        let raceInterval = null;
+        let targetWinners = 3;
+        let finishLineX = 0;
+        let viewportWidth = 0;
+        let viewportHeight = 0;
+        let frameTick = 0;
 
-    const setupModal = document.getElementById('setupModal');
-    const resultModal = document.getElementById('resultModal');
-    const racersLayer = document.getElementById('racersLayer');
-    const markersLayer = document.getElementById('markersLayer');
-    const worldContainer = document.getElementById('worldContainer');
-    const trackArea = document.getElementById('trackArea');
-    const finishLine = document.getElementById('finishLine');
-    const finishLabel = document.getElementById('finishLabel');
-    const nameListInput = document.getElementById('nameList');
-    const startBtn = document.getElementById('startBtn');
-    const distanceDisplay = document.getElementById('distanceDisplay');
-    const racerCountDisplay = document.getElementById('racerCountDisplay');
-    const lineCountLabel = document.getElementById('lineCount');
+        const setupModal = document.getElementById('setupModal');
+        const resultModal = document.getElementById('resultModal');
+        const racersLayer = document.getElementById('racersLayer');
+        const markersLayer = document.getElementById('markersLayer');
+        const worldContainer = document.getElementById('worldContainer');
+        const trackArea = document.getElementById('trackArea');
+        const finishLine = document.getElementById('finishLine');
+        const finishLabel = document.getElementById('finishLabel');
+        const nameListInput = document.getElementById('nameList');
+        const startBtn = document.getElementById('startBtn');
+        const distanceDisplay = document.getElementById('distanceDisplay');
+        const racerCountDisplay = document.getElementById('racerCountDisplay');
+        const lineCountLabel = document.getElementById('lineCount');
 
-    // --- Sound Manager (Web Audio API) ---
-    const SoundManager = {
-        ctx: null,
-        init: function() {
-            if (!this.ctx) {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            } else if (this.ctx.state === 'suspended') {
-                this.ctx.resume();
+        // --- Sound Manager (Web Audio API) ---
+        const SoundManager = {
+            ctx: null,
+            init: function () {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                } else if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playTone: function (freq, type, duration, startTime = 0) {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(this.ctx.currentTime + startTime);
+                osc.stop(this.ctx.currentTime + startTime + duration);
+            },
+            playVictory: function () {
+                this.init();
+                // Simple Arpeggio: C - E - G - C
+                const now = 0;
+                this.playTone(523.25, 'triangle', 0.2, now);
+                this.playTone(659.25, 'triangle', 0.2, now + 0.1);
+                this.playTone(783.99, 'triangle', 0.2, now + 0.2);
+                this.playTone(1046.50, 'square', 0.6, now + 0.3);
+            },
+            playFireworkPop: function () {
+                this.init();
+                const t = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.frequency.setValueAtTime(100, t);
+                osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+                gain.gain.setValueAtTime(0.2, t);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(t);
+                osc.stop(t + 0.5);
             }
-        },
-        playTone: function(freq, type, duration, startTime = 0) {
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
-            gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(this.ctx.currentTime + startTime);
-            osc.stop(this.ctx.currentTime + startTime + duration);
-        },
-        playVictory: function() {
-            this.init();
-            // Simple Arpeggio: C - E - G - C
-            const now = 0;
-            this.playTone(523.25, 'triangle', 0.2, now);
-            this.playTone(659.25, 'triangle', 0.2, now + 0.1);
-            this.playTone(783.99, 'triangle', 0.2, now + 0.2);
-            this.playTone(1046.50, 'square', 0.6, now + 0.3);
-        },
-        playFireworkPop: function() {
-            this.init();
-            const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            // Low freq explosion sound
-            osc.frequency.setValueAtTime(100, t);
-            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
-            gain.gain.setValueAtTime(0.2, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.5);
+        };
+
+        // --- Fireworks System ---
+        const fwCanvas = document.getElementById('fireworksCanvas');
+        const fwCtx = fwCanvas.getContext('2d');
+        let fwParticles = [];
+        let fwAnimationId;
+
+        function resizeCanvas() {
+            fwCanvas.width = window.innerWidth;
+            fwCanvas.height = window.innerHeight;
         }
-    };
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-    // --- Fireworks System ---
-    const fwCanvas = document.getElementById('fireworksCanvas');
-    const fwCtx = fwCanvas.getContext('2d');
-    let fwParticles = [];
-    let fwAnimationId;
-
-    function resizeCanvas() {
-        fwCanvas.width = window.innerWidth;
-        fwCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    class FireworkParticle {
-        constructor(x, y, hue) {
-            this.x = x;
-            this.y = y;
-            this.hue = hue;
-            // Random explosion direction
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = Math.random() * 6 + 2;
-            this.vx = Math.cos(angle) * velocity;
-            this.vy = Math.sin(angle) * velocity;
-            this.alpha = 1;
-            this.decay = Math.random() * 0.015 + 0.015;
-            this.gravity = 0.1;
+        class FireworkParticle {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                this.hue = hue;
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = Math.random() * 6 + 2;
+                this.vx = Math.cos(angle) * velocity;
+                this.vy = Math.sin(angle) * velocity;
+                this.alpha = 1;
+                this.decay = Math.random() * 0.015 + 0.015;
+                this.gravity = 0.1;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= this.decay;
+                this.vx *= 0.96;
+                this.vy *= 0.96;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.alpha;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+                ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`;
+                ctx.fill();
+                ctx.restore();
+            }
         }
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += this.gravity;
-            this.alpha -= this.decay;
-            // Air resistance
-            this.vx *= 0.96;
-            this.vy *= 0.96;
+
+        function createFirework() {
+            SoundManager.playFireworkPop();
+            const x = Math.random() * fwCanvas.width;
+            const y = Math.random() * (fwCanvas.height * 0.6) + (fwCanvas.height * 0.1);
+            const hue = Math.random() * 360;
+            const particleCount = 50;
+            for (let i = 0; i < particleCount; i++) {
+                fwParticles.push(new FireworkParticle(x, y, hue));
+            }
         }
-        draw(ctx) {
-            ctx.save();
-            ctx.globalAlpha = this.alpha;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-            ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`;
-            ctx.fill();
-            ctx.restore();
+
+        function animateFireworks() {
+            fwCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+            fwParticles = fwParticles.filter(p => p.alpha > 0);
+            fwParticles.forEach(p => {
+                p.update();
+                p.draw(fwCtx);
+            });
+            if (Math.random() < 0.05) {
+                createFirework();
+            }
+            fwAnimationId = requestAnimationFrame(animateFireworks);
         }
-    }
 
-    function createFirework() {
-        // Play Sound
-        SoundManager.playFireworkPop();
-        
-        const x = Math.random() * fwCanvas.width;
-        const y = Math.random() * (fwCanvas.height * 0.6) + (fwCanvas.height * 0.1);
-        const hue = Math.random() * 360;
-        const particleCount = 50;
-        for (let i = 0; i < particleCount; i++) {
-            fwParticles.push(new FireworkParticle(x, y, hue));
-        }
-    }
-
-    function animateFireworks() {
-        fwCtx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Trail effect
-        fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
-        // Clear fully transparent pixels to prevent buildup artifacts
-        // fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); // Use this if trails are too messy
-
-        fwParticles = fwParticles.filter(p => p.alpha > 0);
-        fwParticles.forEach(p => {
-            p.update();
-            p.draw(fwCtx);
-        });
-
-        // Randomly spawn new fireworks
-        if (Math.random() < 0.05) { // 5% chance per frame
+        function startFireworks() {
+            fwParticles = [];
+            fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+            animateFireworks();
             createFirework();
+            setTimeout(createFirework, 300);
+            setTimeout(createFirework, 600);
         }
 
-        fwAnimationId = requestAnimationFrame(animateFireworks);
-    }
-
-    function startFireworks() {
-        fwParticles = [];
-        fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
-        animateFireworks();
-        // Trigger initial bursts
-        createFirework();
-        setTimeout(createFirework, 300);
-        setTimeout(createFirework, 600);
-    }
-
-    function stopFireworks() {
-        cancelAnimationFrame(fwAnimationId);
-        fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
-        fwParticles = [];
-    }
-
-
-    // --- Game Logic ---
-
-    generateData();
-    updateLineCount();
-    nameListInput.addEventListener('input', updateLineCount);
-
-    function toggleSetup() {
-        if (isRacing) return;
-        setupModal.classList.toggle('hidden');
-    }
-
-    function generateData() {
-        const count = parseInt(document.getElementById('genAmount').value) || 100;
-        const dummyNames = [];
-        for (let i = 1; i <= count; i++) {
-            dummyNames.push(`P${i.toString().padStart(3, '0')}`);
+        function stopFireworks() {
+            cancelAnimationFrame(fwAnimationId);
+            fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+            fwParticles = [];
         }
-        nameListInput.value = dummyNames.join('\n');
+
+
+        // --- Game Logic ---
+
+        generateData();
         updateLineCount();
-    }
+        nameListInput.addEventListener('input', updateLineCount);
 
-    function updateLineCount() {
-        const lines = nameListInput.value.split('\n').filter(n => n.trim()).length;
-        lineCountLabel.innerText = `${lines} รายชื่อ`;
-        racerCountDisplay.innerText = `ผู้เล่น: ${lines} คน`;
-    }
-
-    function prepareAndStart() {
-        if (isRacing) return;
-        // Init Audio Context on user interaction
-        SoundManager.init();
-
-        const rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
-        if (rawNames.length === 0) { alert("ไม่เหลือรายชื่อผู้เข้าแข่งขันแล้ว!"); toggleSetup(); return; }
-
-        targetWinners = Math.min(parseInt(document.getElementById('winnerCount').value), rawNames.length);
-
-        viewportWidth = trackArea.clientWidth;
-        viewportHeight = trackArea.clientHeight;
-        finishLineX = viewportWidth * TRACK_MULTIPLIER;
-
-        setupTrack(rawNames);
-        
-        startBtn.disabled = true;
-        startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        startBtn.innerText = "กำลังเข้าที่...";
-        
-        setTimeout(() => {
-            isRacing = true;
-            startBtn.innerText = "กำลังแข่งขัน!";
-            startRaceLoop();
-        }, 1000);
-    }
-
-    function setupTrack(names) {
-        racersLayer.innerHTML = '';
-        markersLayer.innerHTML = '';
-        racers = [];
-        winners = [];
-        worldContainer.style.transform = `translateX(0px)`;
-        trackArea.style.backgroundPositionX = `0px`;
-
-        finishLine.style.display = 'block';
-        finishLine.style.left = `${finishLineX}px`;
-        finishLabel.style.display = 'block';
-        finishLabel.style.left = `${finishLineX - 40}px`;
-
-        for (let i = 1; i <= 9; i++) {
-            const leftPos = finishLineX * (i / 10);
-            const line = document.createElement('div');
-            line.className = 'absolute top-0 bottom-0 border-l-2 border-dashed border-white border-opacity-20 pointer-events-none';
-            line.style.left = `${leftPos}px`;
-            
-            const labelTop = document.createElement('div');
-            labelTop.className = 'absolute top-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
-            labelTop.style.left = `${leftPos}px`;
-            labelTop.innerText = `${i * 10}M`;
-
-            const labelBottom = document.createElement('div');
-            labelBottom.className = 'absolute bottom-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
-            labelBottom.style.left = `${leftPos}px`;
-            labelBottom.innerText = `${i * 10}M`;
-
-            markersLayer.appendChild(line);
-            markersLayer.appendChild(labelTop);
-            markersLayer.appendChild(labelBottom);
+        function toggleSetup() {
+            if (isRacing) return;
+            setupModal.classList.toggle('hidden');
         }
 
-        const totalRacers = names.length;
-        let avatarSize = "text-3xl";
-        let labelSize = "text-xs";
-        let iconOffsetY = -20;
-        
-        if (totalRacers > 150) {
-            avatarSize = "text-lg"; labelSize = "text-[8px]"; iconOffsetY = -10;
-        } else if (totalRacers > 50) {
-            avatarSize = "text-2xl"; labelSize = "text-[10px]"; iconOffsetY = -15;
+        function generateData() {
+            const count = parseInt(document.getElementById('genAmount').value) || 100;
+            const dummyNames = [];
+            for (let i = 1; i <= count; i++) {
+                dummyNames.push(`P${i.toString().padStart(3, '0')}`);
+            }
+            nameListInput.value = dummyNames.join('\n');
+            updateLineCount();
         }
 
-        names.forEach((name, index) => {
-            const progress = index / (totalRacers - 1 || 1); 
-            const baseTop = 5 + (progress * 85);
-            const randomJitter = (Math.random() * 2) - 1;
-            const finalTop = Math.max(2, Math.min(95, baseTop + randomJitter));
-            
-            const el = document.createElement('div');
-            el.className = "absolute left-0 flex flex-col items-center group horse-run select-none";
-            el.style.top = `${finalTop}%`;
-            el.style.zIndex = Math.floor(finalTop * 10); 
-            
-            const avatarChar = avatars[index % avatars.length];
-            const colorClass = colors[index % colors.length];
+        function updateLineCount() {
+            const lines = nameListInput.value.split('\n').filter(n => n.trim()).length;
+            lineCountLabel.innerText = `${lines} รายชื่อ`;
+            racerCountDisplay.innerText = `ผู้เล่น: ${lines} คน`;
+        }
 
-            el.innerHTML = `
+        function prepareAndStart() {
+            if (isRacing) return;
+            SoundManager.init();
+
+            const rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
+            if (rawNames.length === 0) { alert("ไม่เหลือรายชื่อผู้เข้าแข่งขันแล้ว!"); toggleSetup(); return; }
+
+            targetWinners = Math.min(parseInt(document.getElementById('winnerCount').value), rawNames.length);
+
+            viewportWidth = trackArea.clientWidth;
+            viewportHeight = trackArea.clientHeight;
+            finishLineX = viewportWidth * TRACK_MULTIPLIER;
+
+            setupTrack(rawNames);
+
+            startBtn.disabled = true;
+            startBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            startBtn.innerText = "กำลังเข้าที่...";
+
+            setTimeout(() => {
+                isRacing = true;
+                startBtn.innerText = "กำลังแข่งขัน!";
+                startRaceLoop();
+            }, 1000);
+        }
+
+        function setupTrack(names) {
+            racersLayer.innerHTML = '';
+            markersLayer.innerHTML = '';
+            racers = [];
+            winners = [];
+            worldContainer.style.transform = `translateX(0px)`;
+            trackArea.style.backgroundPositionX = `0px`;
+
+            finishLine.style.display = 'block';
+            finishLine.style.left = `${finishLineX}px`;
+            finishLabel.style.display = 'block';
+            finishLabel.style.left = `${finishLineX - 40}px`;
+
+            for (let i = 1; i <= 9; i++) {
+                const leftPos = finishLineX * (i / 10);
+                const line = document.createElement('div');
+                line.className = 'absolute top-0 bottom-0 border-l-2 border-dashed border-white border-opacity-20 pointer-events-none';
+                line.style.left = `${leftPos}px`;
+
+                const labelTop = document.createElement('div');
+                labelTop.className = 'absolute top-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
+                labelTop.style.left = `${leftPos}px`;
+                labelTop.innerText = `${i * 10}M`;
+
+                const labelBottom = document.createElement('div');
+                labelBottom.className = 'absolute bottom-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
+                labelBottom.style.left = `${leftPos}px`;
+                labelBottom.innerText = `${i * 10}M`;
+
+                markersLayer.appendChild(line);
+                markersLayer.appendChild(labelTop);
+                markersLayer.appendChild(labelBottom);
+            }
+
+            const totalRacers = names.length;
+            let avatarSize = "text-3xl";
+            let labelSize = "text-xs";
+            let iconOffsetY = -20;
+
+            if (totalRacers > 150) {
+                avatarSize = "text-lg"; labelSize = "text-[8px]"; iconOffsetY = -10;
+            } else if (totalRacers > 50) {
+                avatarSize = "text-2xl"; labelSize = "text-[10px]"; iconOffsetY = -15;
+            }
+
+            names.forEach((name, index) => {
+                const progress = index / (totalRacers - 1 || 1);
+                const baseTop = 5 + (progress * 85);
+                const randomJitter = (Math.random() * 2) - 1;
+                const finalTop = Math.max(2, Math.min(95, baseTop + randomJitter));
+
+                const el = document.createElement('div');
+                el.className = "absolute left-0 flex flex-col items-center group horse-run select-none";
+                el.style.top = `${finalTop}%`;
+                el.style.zIndex = Math.floor(finalTop * 10);
+
+                const avatarChar = avatars[index % avatars.length];
+                const colorClass = colors[index % colors.length];
+
+                el.innerHTML = `
                 <div class="${avatarSize} transform -scale-x-100 filter drop-shadow-sm leading-none relative z-10" style="top: ${iconOffsetY}px">
                     ${avatarChar}
                 </div>
@@ -504,196 +536,220 @@
                     <div class="dust-particle"></div>
                 </div>
             `;
-            
-            const labelEl = el.querySelector('div:nth-child(2)');
-            const dustEl = el.querySelector('.dust-container');
-            if(totalRacers < 30) labelEl.classList.remove('opacity-0');
 
-            racersLayer.appendChild(el);
+                const labelEl = el.querySelector('div:nth-child(2)');
+                const dustEl = el.querySelector('.dust-container');
+                if (totalRacers < 30) labelEl.classList.remove('opacity-0');
 
-            racers.push({
-                name: name,
-                element: el,
-                labelElement: labelEl,
-                dustElement: dustEl,
-                position: 0,
-                yPercent: finalTop,
-                currentSpeed: 0,
-                targetSpeed: Math.random() * 5 + 5,
-                maxSpeed: Math.random() * 8 + 8,
-                aggression: Math.random() * 0.05 + 0.01,
-                finished: false,
-                wobble: Math.random() * 10,
+                racersLayer.appendChild(el);
+
+                racers.push({
+                    name: name,
+                    element: el,
+                    labelElement: labelEl,
+                    dustElement: dustEl,
+                    position: 0,
+                    yPercent: finalTop,
+                    currentSpeed: 0,
+                    targetSpeed: Math.random() * 5 + 5,
+                    maxSpeed: Math.random() * 8 + 8,
+                    aggression: Math.random() * 0.05 + 0.01,
+                    finished: false,
+                    wobble: Math.random() * 10,
+                });
             });
-        });
-    }
+        }
 
-    function startRaceLoop() {
-        raceInterval = setInterval(() => {
-            frameTick++;
-            let activeCount = 0;
-            let leaderPosition = 0;
+        function startRaceLoop() {
+            let prevLeaderPosition = 0; // Track leader for Catch-up logic
 
-            const shouldCheckProximity = (frameTick % 5 === 0);
-            let racerPositions = [];
-            if (shouldCheckProximity && racers.length > 30) { 
-                 racerPositions = racers.map(r => ({ x: r.position, y: (r.yPercent / 100) * viewportHeight }));
-            }
+            raceInterval = setInterval(() => {
+                frameTick++;
+                let activeCount = 0;
+                let currentFrameLeaderPos = 0;
 
-            racers.forEach((racer, index) => {
-                if (racer.finished) {
-                    leaderPosition = Math.max(leaderPosition, racer.position);
-                    return;
-                }
-                
-                activeCount++;
-
-                if (Math.random() < racer.aggression) {
-                    const progress = racer.position / finishLineX;
-                    const fatigue = Math.random() > 0.7 ? 0.5 : 1;
-                    const sprintBonus = (progress > 0.8) ? 1.5 : 1;
-                    racer.targetSpeed = (Math.random() * racer.maxSpeed * fatigue * sprintBonus);
-                    if(racer.targetSpeed < 2) racer.targetSpeed = 2 + Math.random();
-                }
-
-                racer.currentSpeed += (racer.targetSpeed - racer.currentSpeed) * 0.05;
-
-                if (racer.targetSpeed > racer.currentSpeed + 0.5 && racer.currentSpeed > 3) {
-                    racer.dustElement.classList.add('active');
-                } else {
-                    racer.dustElement.classList.remove('active');
-                }
-
-                const speedScale = viewportWidth / 1200; 
-                racer.position += racer.currentSpeed * speedScale;
-
-                racer.wobble += 0.5 + (racer.currentSpeed * 0.05);
-                const jumpY = Math.abs(Math.sin(racer.wobble)) * -3;
-                racer.element.style.transform = `translate(${racer.position}px, ${jumpY}px)`;
-
+                const shouldCheckProximity = (frameTick % 5 === 0);
+                let racerPositions = [];
                 if (shouldCheckProximity && racers.length > 30) {
-                    let isIsolated = true;
-                    const myX = racer.position;
-                    const myY = (racer.yPercent / 100) * viewportHeight;
-                    for (let j = 0; j < racerPositions.length; j++) {
-                        if (index === j) continue;
-                        const other = racerPositions[j];
-                        const dx = Math.abs(myX - other.x);
-                        const dy = Math.abs(myY - other.y);
-                        if (dx < 60 && dy < 60 && (dx*dx + dy*dy) < 3600) {
-                            isIsolated = false;
-                            break;
+                    racerPositions = racers.map(r => ({ x: r.position, y: (r.yPercent / 100) * viewportHeight }));
+                }
+
+                racers.forEach((racer, index) => {
+                    if (racer.finished) {
+                        currentFrameLeaderPos = Math.max(currentFrameLeaderPos, racer.position);
+                        return;
+                    }
+
+                    activeCount++;
+
+                    // --- AI Logic & Rubber Banding ---
+                    const distToLeader = prevLeaderPosition - racer.position;
+
+                    if (Math.random() < racer.aggression) {
+                        const progress = racer.position / finishLineX;
+                        const fatigue = Math.random() > 0.7 ? 0.5 : 1;
+                        const sprintBonus = (progress > 0.8) ? 1.5 : 1;
+
+                        // Rubber Banding: Catch-up Bonus
+                        let catchUpBonus = 1;
+                        if (distToLeader > 0) {
+                            // Trailing: Boost speed based on distance
+                            // Boost scales with distance. Max boost is significant.
+                            catchUpBonus = 1 + (distToLeader / 3000);
+                            if (distToLeader > viewportWidth) catchUpBonus += 0.3; // Extra boost if off-screen
+                        } else {
+                            // Leading: Slight penalty to keep race tight
+                            catchUpBonus = 0.95;
+                        }
+
+                        racer.targetSpeed = (Math.random() * racer.maxSpeed * fatigue * sprintBonus * catchUpBonus);
+                        if (racer.targetSpeed < 2) racer.targetSpeed = 2 + Math.random();
+                    }
+
+                    racer.currentSpeed += (racer.targetSpeed - racer.currentSpeed) * 0.05;
+
+                    if (racer.targetSpeed > racer.currentSpeed + 0.5 && racer.currentSpeed > 3) {
+                        racer.dustElement.classList.add('active');
+                    } else {
+                        racer.dustElement.classList.remove('active');
+                    }
+
+                    const speedScale = viewportWidth / 1200;
+                    racer.position += racer.currentSpeed * speedScale;
+
+                    racer.wobble += 0.5 + (racer.currentSpeed * 0.05);
+                    const jumpY = Math.abs(Math.sin(racer.wobble)) * -3;
+                    racer.element.style.transform = `translate(${racer.position}px, ${jumpY}px)`;
+
+                    // Proximity Check for Name Tags
+                    if (shouldCheckProximity && racers.length > 30) {
+                        let isIsolated = true;
+                        const myX = racer.position;
+                        const myY = (racer.yPercent / 100) * viewportHeight;
+                        for (let j = 0; j < racerPositions.length; j++) {
+                            if (index === j) continue;
+                            const other = racerPositions[j];
+                            const dx = Math.abs(myX - other.x);
+                            const dy = Math.abs(myY - other.y);
+                            if (dx < 60 && dy < 60 && (dx * dx + dy * dy) < 3600) {
+                                isIsolated = false;
+                                break;
+                            }
+                        }
+                        if (isIsolated) {
+                            racer.labelElement.classList.remove('opacity-0');
+                            racer.labelElement.classList.add('force-show-name');
+                        } else {
+                            racer.labelElement.classList.remove('force-show-name');
+                            racer.labelElement.classList.add('opacity-0');
                         }
                     }
-                    if (isIsolated) {
+
+                    if (racer.position >= finishLineX) {
+                        racer.position = finishLineX;
+                        racer.finished = true;
+                        racer.dustElement.classList.remove('active');
                         racer.labelElement.classList.remove('opacity-0');
-                        racer.labelElement.classList.add('force-show-name'); 
-                    } else {
-                        racer.labelElement.classList.remove('force-show-name');
-                        racer.labelElement.classList.add('opacity-0');
+                        racer.labelElement.classList.add('force-show-name');
+
+                        if (winners.length < targetWinners) {
+                            winners.push(racer);
+                            racer.element.classList.add('brightness-125', 'scale-125', 'z-50');
+                            racer.element.innerHTML += `<div class="absolute -top-8 text-2xl animate-bounce">🚩</div>`;
+                        }
                     }
+
+                    currentFrameLeaderPos = Math.max(currentFrameLeaderPos, racer.position);
+                });
+
+                // Update Global Leader Position for next frame's calculations
+                prevLeaderPosition = currentFrameLeaderPos;
+
+                // Camera follow
+                let cameraX = prevLeaderPosition - (viewportWidth * 0.6);
+                if (cameraX < 0) cameraX = 0;
+                if (cameraX > finishLineX - viewportWidth + 100) {
+                    cameraX = finishLineX - viewportWidth + 100;
+                }
+                worldContainer.style.transform = `translateX(${-cameraX}px)`;
+                trackArea.style.backgroundPositionX = `${-cameraX}px`;
+
+                const progressPct = Math.min(100, Math.round((prevLeaderPosition / finishLineX) * 100));
+                distanceDisplay.innerText = `ระยะทาง: ${progressPct}%`;
+
+                if (winners.length >= targetWinners || activeCount === 0) {
+                    clearInterval(raceInterval);
+                    finishGame();
                 }
 
-                if (racer.position >= finishLineX) {
-                    racer.position = finishLineX;
-                    racer.finished = true;
-                    racer.dustElement.classList.remove('active'); 
-                    racer.labelElement.classList.remove('opacity-0');
-                    racer.labelElement.classList.add('force-show-name'); 
+            }, 30);
+        }
 
-                    if (winners.length < targetWinners) {
-                        winners.push(racer);
-                        racer.element.classList.add('brightness-125', 'scale-125', 'z-50');
-                        racer.element.innerHTML += `<div class="absolute -top-8 text-2xl animate-bounce">🚩</div>`;
-                    }
-                }
+        function finishGame() {
+            isRacing = false;
+            startBtn.disabled = false;
+            startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            startBtn.innerText = "🚀 เริ่มแข่งใหม่";
 
-                leaderPosition = Math.max(leaderPosition, racer.position);
+            // Play Victory Sound
+            SoundManager.playVictory();
+
+            // Start Fireworks
+            startFireworks();
+
+            const list = document.getElementById('winnerList');
+            list.innerHTML = '';
+            winners.forEach((w, i) => {
+                const rank = i + 1;
+                let badge = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+                const li = document.createElement('li');
+                li.className = "flex items-center gap-3 p-2 bg-white border-b hover:bg-gray-50";
+                li.innerHTML = `<div class="text-xl w-8 text-center font-bold text-gray-700">${badge}</div><div class="font-bold text-gray-800 flex-1">${w.name}</div>`;
+                list.appendChild(li);
             });
 
-            let cameraX = leaderPosition - (viewportWidth * 0.6);
-            if (cameraX < 0) cameraX = 0;
-            if (cameraX > finishLineX - viewportWidth + 100) { 
-                cameraX = finishLineX - viewportWidth + 100; 
+            const modal = document.getElementById('resultModal');
+            modal.classList.remove('hidden');
+            void modal.offsetWidth;
+            modal.querySelector('div').classList.remove('scale-90', 'opacity-0');
+            modal.querySelector('div').classList.add('scale-100', 'opacity-100');
+        }
+
+        function nextRound() {
+            const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
+            const winnerNames = winners.map(w => w.name);
+            const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
+
+            if (nextRoundList.length === 0) {
+                alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขัน)");
+                closeResult();
+                nameListInput.value = "";
+                updateLineCount();
+                return;
             }
-            worldContainer.style.transform = `translateX(${-cameraX}px)`;
-            trackArea.style.backgroundPositionX = `${-cameraX}px`;
 
-            const progressPct = Math.min(100, Math.round((leaderPosition / finishLineX) * 100));
-            distanceDisplay.innerText = `ระยะทาง: ${progressPct}%`;
+            nameListInput.value = nextRoundList.join('\n');
+            updateLineCount();
+            startBtn.innerText = "🚀 เริ่มรอบถัดไป";
+            closeResult();
+        }
 
-            if (winners.length >= targetWinners || activeCount === 0) {
-                clearInterval(raceInterval);
-                finishGame();
+        function closeResult() {
+            stopFireworks(); // Stop fireworks
+            const modal = document.getElementById('resultModal');
+            modal.querySelector('div').classList.remove('scale-100', 'opacity-100');
+            modal.querySelector('div').classList.add('scale-90', 'opacity-0');
+            setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+
+        window.addEventListener('resize', () => {
+            if (!isRacing && trackArea.clientWidth) {
+                viewportWidth = trackArea.clientWidth;
+                viewportHeight = trackArea.clientHeight;
             }
-
-        }, 30);
-    }
-
-    function finishGame() {
-        isRacing = false;
-        startBtn.disabled = false;
-        startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        startBtn.innerText = "🚀 เริ่มแข่งใหม่";
-
-        // Play Victory Sound
-        SoundManager.playVictory();
-        
-        // Start Fireworks
-        startFireworks();
-
-        const list = document.getElementById('winnerList');
-        list.innerHTML = '';
-        winners.forEach((w, i) => {
-            const rank = i + 1;
-            let badge = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-            const li = document.createElement('li');
-            li.className = "flex items-center gap-3 p-2 bg-white border-b hover:bg-gray-50";
-            li.innerHTML = `<div class="text-xl w-8 text-center font-bold text-gray-700">${badge}</div><div class="font-bold text-gray-800 flex-1">${w.name}</div>`;
-            list.appendChild(li);
         });
 
-        const modal = document.getElementById('resultModal');
-        modal.classList.remove('hidden');
-        void modal.offsetWidth; 
-        modal.querySelector('div').classList.remove('scale-90', 'opacity-0');
-        modal.querySelector('div').classList.add('scale-100', 'opacity-100');
-    }
-
-    function nextRound() {
-        const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
-        const winnerNames = winners.map(w => w.name);
-        const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
-        
-        if (nextRoundList.length === 0) {
-            alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขัน)");
-            closeResult();
-            nameListInput.value = "";
-            updateLineCount();
-            return;
-        }
-
-        nameListInput.value = nextRoundList.join('\n');
-        updateLineCount();
-        startBtn.innerText = "🚀 เริ่มรอบถัดไป";
-        closeResult();
-    }
-
-    function closeResult() {
-        stopFireworks(); // Stop fireworks
-        const modal = document.getElementById('resultModal');
-        modal.querySelector('div').classList.remove('scale-100', 'opacity-100');
-        modal.querySelector('div').classList.add('scale-90', 'opacity-0');
-        setTimeout(() => modal.classList.add('hidden'), 300);
-    }
-
-    window.addEventListener('resize', () => {
-        if(!isRacing && trackArea.clientWidth) {
-            viewportWidth = trackArea.clientWidth;
-            viewportHeight = trackArea.clientHeight;
-        }
-    });
-
-</script>
+    </script>
 </body>
+
 </html>
