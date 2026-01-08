@@ -137,7 +137,7 @@
         <header class="bg-gray-900 bg-opacity-90 p-3 shadow-md z-20 border-b border-gray-700 flex-shrink-0">
             <div class="flex flex-row justify-between items-center px-4">
                 <h1 class="text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-2">
-                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">อสค. จัชรางวัล ปีใหม่ 2569</span>
+                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">จับรางวัล ปีใหม่ อสค. 2569</span>
                 </h1>
                 
                 <div class="flex gap-3 items-center text-sm md:text-base">
@@ -617,14 +617,24 @@
                     
                     // Rubber Banding: Catch-up Bonus
                     let catchUpBonus = 1;
+                    // Logic to tighten the pack when few racers remain
+                    const isFewRacers = racers.length <= 20; 
+
                     if (distToLeader > 0) {
                         // Trailing: Boost speed based on distance
-                        // Boost scales with distance. Max boost is significant.
-                        catchUpBonus = 1 + (distToLeader / 3000); 
-                        if (distToLeader > viewportWidth) catchUpBonus += 0.3; // Extra boost if off-screen
+                        if (isFewRacers) {
+                             // Stronger rubber band for small groups
+                             catchUpBonus = 1 + (distToLeader / 1500); 
+                             if (distToLeader > viewportWidth * 0.25) catchUpBonus += 0.4; // Boost earlier
+                        } else {
+                             // Standard rubber band
+                             catchUpBonus = 1 + (distToLeader / 3000); 
+                             if (distToLeader > viewportWidth) catchUpBonus += 0.3; 
+                        }
                     } else {
                         // Leading: Slight penalty to keep race tight
-                        catchUpBonus = 0.95; 
+                        // Higher penalty for small groups to allow overtaking
+                        catchUpBonus = isFewRacers ? 0.85 : 0.95; 
                     }
 
                     racer.targetSpeed = (Math.random() * racer.maxSpeed * fatigue * sprintBonus * catchUpBonus);
