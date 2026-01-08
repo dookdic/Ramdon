@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>โปรแกรมสุ่มชื่อแข่งม้า</title>
     <!-- ใช้ Font สวยๆ จาก Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -115,6 +115,16 @@
             z-index: 40;
         }
 
+        /* --- Countdown Animation --- */
+        @keyframes popIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop {
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
     </style>
 </head>
 <body>
@@ -127,7 +137,7 @@
         <header class="bg-gray-900 bg-opacity-90 p-3 shadow-md z-20 border-b border-gray-700 flex-shrink-0">
             <div class="flex flex-row justify-between items-center px-4">
                 <h1 class="text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-2">
-                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">อสค. จับรางวัล ปีใหม่ 2569</span>
+                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">อสค. สุ่มรางวัลปีใหม่ 2569</span>
                 </h1>
                 
                 <div class="flex gap-3 items-center text-sm md:text-base">
@@ -151,12 +161,21 @@
                 <div id="markersLayer" class="absolute inset-0 z-0"></div>
                 <div id="racersLayer" class="absolute inset-0 z-10">
                      <div class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
-                        
+                        <div class="text-6xl">🏟️</div>
+                        <div class="text-2xl"></div>
+                        <div class="text-sm"></div>
                     </div>
                 </div>
                 <div id="finishLine" class="absolute top-0 bottom-0 w-4 finish-line z-0 shadow-lg hidden"></div>
                 <div id="finishLabel" class="absolute top-1/2 transform -translate-y-1/2 rotate-90 text-white font-bold tracking-widest opacity-30 text-6xl pointer-events-none select-none hidden" style="white-space: nowrap;">
                     FINISH LINE
+                </div>
+            </div>
+
+            <!-- Countdown Overlay -->
+            <div id="countdownOverlay" class="absolute inset-0 z-50 flex items-center justify-center pointer-events-none hidden bg-black bg-opacity-20">
+                <div id="countdownText" class="text-[10rem] font-black text-white drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] stroke-black" style="-webkit-text-stroke: 4px black;">
+                    3
                 </div>
             </div>
         </main>
@@ -231,6 +250,8 @@
     const distanceDisplay = document.getElementById('distanceDisplay');
     const racerCountDisplay = document.getElementById('racerCountDisplay');
     const lineCountLabel = document.getElementById('lineCount');
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownText = document.getElementById('countdownText');
 
     // --- Sound Manager (Web Audio API) ---
     const SoundManager = {
@@ -254,6 +275,19 @@
             gain.connect(this.ctx.destination);
             osc.start(this.ctx.currentTime + startTime);
             osc.stop(this.ctx.currentTime + startTime + duration);
+        },
+        playBeep: function(freq) {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.1);
         },
         playVictory: function() {
             this.init();
@@ -410,13 +444,49 @@
         
         startBtn.disabled = true;
         startBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        startBtn.innerText = "กำลังเข้าที่...";
+        startBtn.innerText = "เตรียมตัว...";
         
-        setTimeout(() => {
-            isRacing = true;
-            startBtn.innerText = "กำลังแข่งขัน!";
-            startRaceLoop();
-        }, 1000);
+        // Start Countdown Sequence instead of starting directly
+        startCountdown();
+    }
+
+    function startCountdown() {
+        let count = 3;
+        countdownOverlay.classList.remove('hidden');
+        
+        const runStep = () => {
+            // Remove animation class to reset
+            countdownText.classList.remove('animate-pop');
+            void countdownText.offsetWidth; // Trigger reflow
+
+            if (count > 0) {
+                countdownText.innerText = count;
+                countdownText.style.color = 'white';
+                SoundManager.playBeep(440); // Low beep
+            } else {
+                countdownText.innerText = "GO!";
+                countdownText.style.color = '#fbbf24'; // Yellow
+                SoundManager.playBeep(880); // High beep
+            }
+            
+            // Add animation class
+            countdownText.classList.add('animate-pop');
+
+            if (count === 0) {
+                // End countdown
+                setTimeout(() => {
+                    countdownOverlay.classList.add('hidden');
+                    isRacing = true;
+                    startBtn.innerText = "กำลังแข่งขัน!";
+                    startRaceLoop();
+                }, 500);
+            } else {
+                count--;
+                setTimeout(runStep, 1000);
+            }
+        };
+
+        runStep();
     }
 
     function setupTrack(names) {
