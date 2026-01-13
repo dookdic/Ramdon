@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมสุ่มชื่อแข่งม้า (Group Mode)</title>
+    <title>โปรแกรมสุ่มชื่อแข่งม้า (Fixed Finish Line)</title>
     <!-- ใช้ Font สวยๆ จาก Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -316,17 +316,11 @@
     
     // Group Mode State
     let currentMode = 'simple'; // 'simple' or 'group'
-    
-    // FIX: Set initial Active Group Tab to 0 (None) to prevent overwrite on first load
     let activeGroupTab = 0; 
     
     // Data storage for groups 2-6
     const groupData = {
-        2: [], // ส่วนกลางฝ่าย
-        3: [], // กปส-พ.
-        4: [], // กตส-พ.
-        5: [], // กสส-พ.
-        6: []  // กบร-พ.
+        2: [], 3: [], 4: [], 5: [], 6: []
     };
     
     const groupConfig = {
@@ -336,6 +330,102 @@
         4: { name: '4. กตส-พ.', color: 'bg-green-600' },
         5: { name: '5. กสส-พ.', color: 'bg-yellow-600' },
         6: { name: '6. กบร-พ.', color: 'bg-purple-600' }
+    };
+
+    // --- Sound Manager (Web Audio API) ---
+    const SoundManager = {
+        ctx: null,
+        bgmInterval: null,
+        
+        init: function() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        
+        playTone: function(freq, type, duration, startTime = 0, vol = 0.1) {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
+            gain.gain.setValueAtTime(vol, this.ctx.currentTime + startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + startTime);
+            osc.stop(this.ctx.currentTime + startTime + duration);
+        },
+
+        playBeep: function(freq) {
+            this.playTone(freq, 'square', 0.1, 0, 0.1);
+        },
+
+        playVictory: function() {
+            this.init();
+            const now = 0;
+            this.playTone(523.25, 'triangle', 0.2, now, 0.2);
+            this.playTone(659.25, 'triangle', 0.2, now + 0.1, 0.2);
+            this.playTone(783.99, 'triangle', 0.2, now + 0.2, 0.2);
+            this.playTone(1046.50, 'square', 0.6, now + 0.3, 0.2);
+        },
+
+        playFireworkPop: function() {
+            this.init();
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(100, t);
+            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.5);
+        },
+
+        playRaceMusic: function() {
+            this.init();
+            this.stopRaceMusic(); 
+
+            const tempo = 0.13; // Faster tempo
+            // Simple fast-paced 8-bit melody
+            // C5 G4 C5 E5 | F5 C5 F5 A5 | G5 D5 G5 B5 | C6 ...
+            const melody = [
+                523.25, 392.00, 523.25, 659.25, // C, G, C, E
+                698.46, 523.25, 698.46, 880.00, // F, C, F, A
+                783.99, 587.33, 783.99, 987.77, // G, D, G, B
+                1046.50, 783.99, 523.25, 392.00 // C6, G, C, G
+            ];
+            
+            let noteIndex = 0;
+
+            this.bgmInterval = setInterval(() => {
+                if(this.ctx.state === 'suspended') this.ctx.resume();
+                
+                // Main Melody (Square)
+                const noteFreq = melody[noteIndex % melody.length];
+                this.playTone(noteFreq, 'square', 0.08, 0, 0.08); // Short & crisp
+                
+                // Bass Line (Triangle) - Every 2nd note
+                if (noteIndex % 2 === 0) {
+                     const bassFreq = (noteIndex % 8 < 4) ? 261.63 : 196.00; // C4 then G3
+                     this.playTone(bassFreq, 'triangle', 0.2, 0, 0.15); 
+                }
+
+                noteIndex++;
+            }, tempo * 1000); 
+        },
+
+        stopRaceMusic: function() {
+            if (this.bgmInterval) {
+                clearInterval(this.bgmInterval);
+                this.bgmInterval = null;
+            }
+        }
     };
 
     // --- Elements ---
@@ -356,131 +446,20 @@
     const simpleModeLabel = document.getElementById('simpleModeLabel');
     const raceGroupSelect = document.getElementById('raceGroupSelect');
 
-    // Input Elements
-    const nameListInput = document.getElementById('nameList'); // For simple mode
-    const groupInputArea = document.getElementById('groupInputArea'); // For group mode
+    const nameListInput = document.getElementById('nameList');
+    const groupInputArea = document.getElementById('groupInputArea');
     const group1Overlay = document.getElementById('group1Overlay');
 
     // --- Initialization ---
     initGroupTabs();
     generateData(); // Gen simple data
     
-    // Default Group Data for testing (Added more presets for verification)
-    groupData[2] = ["นายชัยยศ หาญอมร",
-"นางพรทิพย์  เอี่ยมสาย",
-"นายปกรณ์  ประดิษฐ์ทอง",
-"นางศิรินาถ  ศิริอักษร",
-"นางสาวศศิลักษณ์  ขำศิริ",
-"นางสาวจิตราภรณ์ สุขเกษม",
-"นางขวัญชนก  วิวัฒนานนท์",
-"นายภูริศร์ วิรยศิริ",
-"นางปัทมาภรณ์  สุขสำเนียง",
-"นางวัชราภรณ์  ศรีจันทร์",
-"นายณภัทร ดุรงค์พงษ์ธร",
-"นางจิดาภา  ชื่นชม",
-"นายสุรชัย อยู่ชมสุข",
-"นายนิกร เพ็งพรรณ์",
-"นายฉลอง ชำนาญสิงห์",
-"นายอภิรักษ์ บุญเป็ง",
-"นางสาวอาภัสรา  ศรีงามขำ",
-"นางสาวเบญจมาศ  ปานนพภา",
-"นางสาวนุสรา  สรวลสรรค์",
-"นายปิติภัทร  ปัญญาแก้ว",
-"นายญาณปรีชา  คำมาบุตร",
-"นายณรงค์รัตน์  สุนทรประทุม",
-"นางสาวพรรณทิพย์ แก้วผัด",
-"นางสาวศรินดา สังขทิพย์",
-"นางปราณี  อยู่ชมสุข",
-"นางสาวปาจรีย์  พันธุ์เพ็ง",
-"นายอนุชิต  กอสุนทร",
-"นายณรงค์ศักดิ์  มีพลัง",
-"นายธีรยุทธ์ เรืองหิรัญ",
-]; 
-
-    groupData[3] = ["นางพรศรินทร์  แหลมหลักสกุล",
-"นายจิตตกานต์  สินธุเสก",
-"นายเฉลิมวิทย์  ไกรขาว",
-"นางสาวศุทธินี  วราภรณ์",
-"นายดิสลักษณ์  อมราพิทักษ์",
-"นางสาวณิชยา  โรจน์เพ็ญเพียร",
-"นางสาวกมลกาญจน์  กิจวัทวรเวทย์",
-"นางสาวมาลีวัลย์ สรรพอุดม",
-"นายธิติภูมิ สิทธิวงศ์",
-"นางสาววลัยรัตน์ ปูผ้า",
-"นางสาวปภาพินท์ บางประสิทธิ์",
-"นางสาวกรปวีณ์  เหมกรณ์",
-"นางสาวธีตา อินทเสน",
-"นายเจตน์สิทธิ์  สำลีรัตน์",
-"นายปุถุชน ใบไม้",
-]; 
-    groupData[4] = ["นางอิศรา  ประวีณวรกุล",
-"นายวรศักดิ์  ยะกันมูล",
-"นางนพรัตน์  ทองพูล",
-"นางสาวนภัสวัณณ์ น้อยวงศ์",
-"นายเอกชัย  มาลาพล",
-"นางสาวพุทธิชา บุญชะตา",
-"นางสาวตรีวรัตม์ รุจิเกียรติโชค",
-"นายพงศ์นาท  ทวยเจริญ",
-"นางสาวมลนิรา  ธรรมเสรีกุล",
-"นายวรวุฒิ  ปุณฑริกพันธ์",
-"นางสาวอวิกา  นุ่มนวล",
-"นายจาตุรงค์ สัมฤทธิ์",
-"นางสาวพนิดา  ทาราช",
-"นายพุฒิภัทร กาญจโนมัย",
-"นายทรงเดช  คำเครื่อง",
-"นายคทาวุธ  มันตาดิลก",
-"นายอฒิชัย  ศรีมาลา",
-"นายณรงค์ศักดิ์  สระสม",
-"นายสมพจน์ อ่าวสมบัติกุล",
-"นายศุภบุศย์ ดำรงค์กิจการ",
-"นางสาวธนิตา  หมื่นวิชิต",
-"นายสุจริต  ภู่ภักดิ์",
-"นายอาทิตย์  สิงหา",
-"นายสุพรรณ  พึ่งญาติ",
-"นายกมลพัฒน์  ประพันธา",
-"นายพงศ์วิริยะ เชาวลิตร",
-"นายนัทธสิทธิ  ค้ำชู",
-"นายณฐชาดล ยิ้มสด",
-"นายทศพร  ทิพย์ทิมาพันธ์",
-"นางสาวดลฤทัย  ตันติวราภรณ์",
-"นายวราพล ชัยมณี",
-"นางสาวปรมัย  จัดภัย",
-"น.ส.วรรษมล ทองเอียด",
-"น.ส.กุลภรณ์ กลิ่นเจริญ",
-]; 
-    groupData[5] = ["นางสาวนิลภา  แพมณี",
-"นายวิษณุ ชูประยูร",
-"นายสุทธิ ยุวะสุต",
-"นายจักวัน  อธิปัญญา",
-"นางสาววรรณกนก พุทธรังษี",
-"นางลลิตา แสนสอน",
-"นายสุพัฒน์พิทย์ เทียนเกษม",
-"นายเหมือง  ชื่นมนุษย์",
-"นายเจษฎากร หอมกลิ่น",
-"นางสาวนันท์ชนก นุชมิตร",
-"นางสาวพรภัค  ธนะเศวต",
-"นางสาวธนัชพร สุขเสริม",
-"นายกฤตพัฒน์ แก่นประธูป",
-]; 
-    groupData[6] = ["นายภัควี  ศิลปานนท์",
-"น.ส.กุณชญา หินเธาว์",
-"นางพชรมน สุทธพินทุ",
-"นางสาวอรณิชา แก้วสงคราม",
-"นายวรพล สุขสำราญ",
-"นางสาวปวรรัตน์  ปฏิภาณวัฒน์",
-"น.ส.ชนกภัทร์ ดาราสุริยงค์",
-"น.ส.จณิสตา ทิยา",
-"น.ส.ญาติมา กังแฮ",
-"นางสาวชนัตตาภา  ศิรินาวิน",
-"นางสาวพรวิภา อุ่นโรจน์",
-"นายธนกฤต หาญณรงค์",
-"นายพนิต เทอดสุทธิรณภูมิ",
-"นางสาวอรุณลักษณ์ จิรธนภิญโญ",
-"นายชนสรณ์  โตชนาการ",
-"นางสาวฐนิกจลา สังข์ภิรมย์",
-"นายบัญฑูร  อินทิม",
-"นางสาวนิคริน  ปุยนุเคราะห์",
-]; 
+    // Group Data Presets
+    groupData[2] = ["นายชัยยศ หาญอมร","นางพรทิพย์  เอี่ยมสาย","นายปกรณ์  ประดิษฐ์ทอง","นางศิรินาถ  ศิริอักษร","นางสาวศศิลักษณ์  ขำศิริ","นางสาวจิตราภรณ์ สุขเกษม","นางขวัญชนก  วิวัฒนานนท์","นายภูริศร์ วิรยศิริ","นางปัทมาภรณ์  สุขสำเนียง","นางวัชราภรณ์  ศรีจันทร์","นายณภัทร ดุรงค์พงษ์ธร","นางจิดาภา  ชื่นชม","นายสุรชัย อยู่ชมสุข","นายนิกร เพ็งพรรณ์","นายฉลอง ชำนาญสิงห์","นายอภิรักษ์ บุญเป็ง","นางสาวอาภัสรา  ศรีงามขำ","นางสาวเบญจมาศ  ปานนพภา","นางสาวนุสรา  สรวลสรรค์","นายปิติภัทร  ปัญญาแก้ว","นายญาณปรีชา  คำมาบุตร","นายณรงค์รัตน์  สุนทรประทุม","นางสาวพรรณทิพย์ แก้วผัด","นางสาวศรินดา สังขทิพย์","นางปราณี  อยู่ชมสุข","นางสาวปาจรีย์  พันธุ์เพ็ง","นายอนุชิต  กอสุนทร","นายณรงค์ศักดิ์  มีพลัง","นายธีรยุทธ์ เรืองหิรัญ"]; 
+    groupData[3] = ["นางพรศรินทร์  แหลมหลักสกุล","นายจิตตกานต์  สินธุเสก","นายเฉลิมวิทย์  ไกรขาว","นางสาวศุทธินี  วราภรณ์","นายดิสลักษณ์  อมราพิทักษ์","นางสาวณิชยา  โรจน์เพ็ญเพียร","นางสาวกมลกาญจน์  กิจวัทวรเวทย์","นางสาวมาลีวัลย์ สรรพอุดม","นายธิติภูมิ สิทธิวงศ์","นางสาววลัยรัตน์ ปูผ้า","นางสาวปภาพินท์ บางประสิทธิ์","นางสาวกรปวีณ์  เหมกรณ์","นางสาวธีตา อินทเสน","นายเจตน์สิทธิ์  สำลีรัตน์","นายปุถุชน ใบไม้"]; 
+    groupData[4] = ["นางอิศรา  ประวีณวรกุล","นายวรศักดิ์  ยะกันมูล","นางนพรัตน์  ทองพูล","นางสาวนภัสวัณณ์ น้อยวงศ์","นายเอกชัย  มาลาพล","นางสาวพุทธิชา บุญชะตา","นางสาวตรีวรัตม์ รุจิเกียรติโชค","นายพงศ์นาท  ทวยเจริญ","นางสาวมลนิรา  ธรรมเสรีกุล","นายวรวุฒิ  ปุณฑริกพันธ์","นางสาวอวิกา  นุ่มนวล","นายจาตุรงค์ สัมฤทธิ์","นางสาวพนิดา  ทาราช","นายพุฒิภัทร กาญจโนมัย","นายทรงเดช  คำเครื่อง","นายคทาวุธ  มันตาดิลก","นายอฒิชัย  ศรีมาลา","นายณรงค์ศักดิ์  สระสม","นายสมพจน์ อ่าวสมบัติกุล","นายศุภบุศย์ ดำรงค์กิจการ","นางสาวธนิตา  หมื่นวิชิต","นายสุจริต  ภู่ภักดิ์","นายอาทิตย์  สิงหา","นายสุพรรณ  พึ่งญาติ","นายกมลพัฒน์  ประพันธา","นายพงศ์วิริยะ เชาวลิตร","นายนัทธสิทธิ  ค้ำชู","นายณฐชาดล ยิ้มสด","นายทศพร  ทิพย์ทิมาพันธ์","นางสาวดลฤทัย  ตันติวราภรณ์","นายวราพล ชัยมณี","นางสาวปรมัย  จัดภัย","น.ส.วรรษมล ทองเอียด","น.ส.กุลภรณ์ กลิ่นเจริญ"]; 
+    groupData[5] = ["นางสาวนิลภา  แพมณี","นายวิษณุ ชูประยูร","นายสุทธิ ยุวะสุต","นายจักวัน  อธิปัญญา","นางสาววรรณกนก พุทธรังษี","นางลลิตา แสนสอน","นายสุพัฒน์พิทย์ เทียนเกษม","นายเหมือง  ชื่นมนุษย์","นายเจษฎากร หอมกลิ่น","นางสาวนันท์ชนก นุชมิตร","นางสาวพรภัค  ธนะเศวต","นางสาวธนัชพร สุขเสริม","นายกฤตพัฒน์ แก่นประธูป"]; 
+    groupData[6] = ["นายภัควี  ศิลปานนท์","น.ส.กุณชญา หินเธาว์","นางพชรมน สุทธพินทุ","นางสาวอรณิชา แก้วสงคราม","นายวรพล สุขสำราญ","นางสาวปวรรัตน์  ปฏิภาณวัฒน์","น.ส.ชนกภัทร์ ดาราสุริยงค์","น.ส.จณิสตา ทิยา","น.ส.ญาติมา กังแฮ","นางสาวชนัตตาภา  ศิรินาวิน","นางสาวพรวิภา อุ่นโรจน์","นายธนกฤต หาญณรงค์","นายพนิต เทอดสุทธิรณภูมิ","นางสาวอรุณลักษณ์ จิรธนภิญโญ","นายชนสรณ์  โตชนาการ","นางสาวฐนิกจลา สังข์ภิรมย์","นายบัญฑูร  อินทิม","นางสาวนิคริน  ปุยนุเคราะห์"]; 
     
     updateLineCount();
     nameListInput.addEventListener('input', updateLineCount);
@@ -514,11 +493,9 @@
             groupSelectorContainer.classList.remove('hidden');
             simpleModeLabel.classList.add('hidden');
             
-            // Render first editable tab (2) if none selected or just switched
             if (activeGroupTab === 0) {
                  switchGroupTab(2);
             } else {
-                 // Refresh current view
                  switchGroupTab(activeGroupTab);
             }
         }
@@ -527,10 +504,8 @@
     function initGroupTabs() {
         const container = document.getElementById('groupTabs');
         container.innerHTML = '';
-        
         Object.keys(groupConfig).forEach(key => {
             const btn = document.createElement('button');
-            // Initial render class
             btn.className = `px-3 py-1 text-xs rounded whitespace-nowrap transition-colors border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-300`;
             btn.innerText = groupConfig[key].name;
             btn.dataset.group = key;
@@ -540,14 +515,10 @@
     }
 
     function switchGroupTab(groupId) {
-        // FIX: Save ONLY if we have a valid active group (not 0 or 1)
         if (activeGroupTab !== 1 && activeGroupTab !== 0) {
             saveCurrentTabToMemory();
         }
-        
         activeGroupTab = groupId;
-        
-        // Update UI Tabs
         const tabs = document.getElementById('groupTabs').children;
         for(let btn of tabs) {
             if(parseInt(btn.dataset.group) === groupId) {
@@ -556,27 +527,21 @@
                 btn.className = `px-3 py-1 text-xs rounded whitespace-nowrap transition-colors border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-300`;
             }
         }
-
-        // Update Content Area
         if (groupId === 1) {
-            // Group 1 is read-only / aggregate
             group1Overlay.classList.remove('hidden');
             groupInputArea.disabled = true;
-            groupInputArea.value = ""; // Clear underneath
+            groupInputArea.value = ""; 
             updateAggregateDisplay();
         } else {
             group1Overlay.classList.add('hidden');
             groupInputArea.disabled = false;
-            // Load data from memory
             groupInputArea.value = groupData[groupId].join('\n');
             updateGroupTabCount();
         }
     }
 
     function saveCurrentTabToMemory() {
-        // FIX: Guard against saving to invalid ID 0 or ReadOnly ID 1
         if (activeGroupTab === 1 || activeGroupTab === 0) return;
-        
         const text = groupInputArea.value;
         const list = text.split('\n').map(n => n.trim()).filter(n => n !== "");
         groupData[activeGroupTab] = list;
@@ -589,7 +554,6 @@
     }
 
     function updateAggregateDisplay() {
-        // Combine all lists
         let total = 0;
         for (let i = 2; i <= 6; i++) {
             total += groupData[i].length;
@@ -612,12 +576,10 @@
         }
         toggleSetup();
         
-        // Update main screen racer count
         let count = 0;
         if (currentMode === 'simple') {
             count = nameListInput.value.split('\n').filter(n=>n.trim()).length;
         } else {
-             // Default view count (Active selection)
              const sel = raceGroupSelect.value;
              if (sel == 1) count = getCombinedGroup1List().length;
              else count = groupData[sel].length;
@@ -633,7 +595,6 @@
     }
 
     function generateData() {
-        // Only for simple mode for now
         if (currentMode !== 'simple') {
             alert("ฟังก์ชั่นสุ่มชื่อใช้ได้เฉพาะโหมดปกติครับ (โหมดกลุ่มกรุณากรอกเอง)");
             return;
@@ -664,10 +625,8 @@
             rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
             groupName = "โหมดปกติ";
         } else {
-            // Group Mode Logic
             const selectedGroupId = parseInt(raceGroupSelect.value);
             groupName = groupConfig[selectedGroupId].name;
-            
             if (selectedGroupId === 1) {
                 rawNames = getCombinedGroup1List();
             } else {
@@ -687,7 +646,6 @@
         viewportHeight = trackArea.clientHeight;
         finishLineX = viewportWidth * TRACK_MULTIPLIER;
 
-        // Update UI (with null check to fix error)
         const trackMsg = document.getElementById('trackMessage');
         if (trackMsg) {
             trackMsg.innerText = `กำลังแข่ง: ${groupName}`;
@@ -726,6 +684,7 @@
                 setTimeout(() => {
                     countdownOverlay.classList.add('hidden');
                     isRacing = true;
+                    SoundManager.playRaceMusic(); // Start Music Here
                     startBtn.innerText = "กำลังแข่งขัน!";
                     startRaceLoop();
                 }, 500);
@@ -746,12 +705,12 @@
         worldContainer.style.transform = `translateX(0px)`;
         trackArea.style.backgroundPositionX = `0px`;
 
+        // Add Finish Line & Label logic back
         finishLine.style.display = 'block';
         finishLine.style.left = `${finishLineX}px`;
         finishLabel.style.display = 'block';
         finishLabel.style.left = `${finishLineX - 40}px`;
 
-        // Create Markers
         for (let i = 1; i <= 9; i++) {
             const leftPos = finishLineX * (i / 10);
             const line = document.createElement('div');
@@ -954,10 +913,10 @@
         startBtn.disabled = false;
         startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         startBtn.innerText = "🚀 เริ่มแข่งใหม่";
+        SoundManager.stopRaceMusic(); // Stop Music
         SoundManager.playVictory();
         startFireworks();
 
-        // Update Modal Subtitle
         let subtitle = "";
         if (currentMode === 'simple') subtitle = "โหมดปกติ";
         else {
@@ -1000,29 +959,23 @@
             nameListInput.value = nextRoundList.join('\n');
             updateLineCount();
         } else {
-            // Group Mode Elimination
-            // Remove winners from ALL groups they appear in (Groups 2-6)
-            // Even if racing Group 1 (All), we must remove from origin groups
             let removedCount = 0;
             let remainingTotal = 0;
-
             for (let i = 2; i <= 6; i++) {
                 const originalLen = groupData[i].length;
                 groupData[i] = groupData[i].filter(name => !winnerNames.includes(name));
                 if (groupData[i].length < originalLen) removedCount++;
                 remainingTotal += groupData[i].length;
             }
-
             if (remainingTotal === 0) {
                 alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขันในทุกกลุ่ม)");
                 closeResult();
-                updateAggregateDisplay(); // Refresh UI count
+                updateAggregateDisplay(); 
                 racerCountDisplay.innerText = "ผู้เล่น: 0 คน";
                 return;
             }
         }
 
-        // Refresh Racer Count on UI for next race
         let nextRaceCount = 0;
         if(currentMode === 'simple') {
             nextRaceCount = nameListInput.value.split('\n').filter(n=>n.trim()).length;
@@ -1044,66 +997,6 @@
         modal.querySelector('div').classList.add('scale-90', 'opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
-
-    // --- Sound Manager ---
-    const SoundManager = {
-        ctx: null,
-        init: function() {
-            if (!this.ctx) {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            } else if (this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-        },
-        playTone: function(freq, type, duration, startTime = 0) {
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
-            gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(this.ctx.currentTime + startTime);
-            osc.stop(this.ctx.currentTime + startTime + duration);
-        },
-        playBeep: function(freq) {
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            osc.type = 'square';
-            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.1);
-        },
-        playVictory: function() {
-            this.init();
-            const now = 0;
-            this.playTone(523.25, 'triangle', 0.2, now);
-            this.playTone(659.25, 'triangle', 0.2, now + 0.1);
-            this.playTone(783.99, 'triangle', 0.2, now + 0.2);
-            this.playTone(1046.50, 'square', 0.6, now + 0.3);
-        },
-        playFireworkPop: function() {
-            this.init();
-            const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.frequency.setValueAtTime(100, t);
-            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
-            gain.gain.setValueAtTime(0.2, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.5);
-        }
-    };
 
     // --- Fireworks ---
     const fwCanvas = document.getElementById('fireworksCanvas');
