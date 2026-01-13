@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>โปรแกรมสุ่มชื่อแข่งม้า</title>
+    <title>โปรแกรมสุ่มชื่อแข่งม้า (Group Mode)</title>
     <!-- ใช้ Font สวยๆ จาก Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
@@ -125,6 +125,24 @@
             animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
 
+        /* Tab Styles */
+        .tab-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #2563eb;
+        }
+        
+        /* Custom Select */
+        select {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1em;
+        }
+
     </style>
 </head>
 <body>
@@ -134,11 +152,31 @@
 
     <div id="gameWrapper">
         <!-- Header -->
-        <header class="bg-gray-900 bg-opacity-90 p-3 shadow-md z-20 border-b border-gray-700 flex-shrink-0">
+        <header class="bg-gray-900 bg-opacity-95 p-3 shadow-md z-30 border-b border-gray-700 flex-shrink-0">
             <div class="flex flex-row justify-between items-center px-4">
-                <h1 class="text-xl md:text-2xl font-bold text-yellow-400 flex items-center gap-2">
-                    🏁 <span class="hidden md:inline">Long Track Race</span> <span class="text-sm bg-blue-600 text-white px-2 py-0.5 rounded">จับรางวัล ปีใหม่ อสค. 2569</span>
-                </h1>
+                <div class="flex items-center gap-4">
+                    <h1 class="text-xl md:text-2xl font-bold text-yellow-400 hidden md:block">
+                        🏁 Race
+                    </h1>
+                    
+                    <!-- Group Selector (Visible only in Group Mode) -->
+                    <div id="groupSelectorContainer" class="hidden">
+                        <label class="text-xs text-gray-400 block mb-0.5">เลือกกลุ่มแข่งขัน:</label>
+                        <select id="raceGroupSelect" class="bg-gray-800 text-white text-sm border border-gray-600 rounded px-3 py-1 pr-8 focus:outline-none focus:border-blue-500 w-48">
+                            <option value="1">1. อสค (รวมทั้งหมด)</option>
+                            <option value="2">2. ส่วนกลางฝ่าย</option>
+                            <option value="3">3. กปส-พ.</option>
+                            <option value="4">4. กตส-พ.</option>
+                            <option value="5">5. กสส-พ.</option>
+                            <option value="6">6. กบร-พ.</option>
+                        </select>
+                    </div>
+
+                    <!-- Simple Mode Label -->
+                    <div id="simpleModeLabel" class="text-sm bg-gray-700 text-gray-300 px-2 py-1 rounded">
+                        โหมดปกติ
+                    </div>
+                </div>
                 
                 <div class="flex gap-3 items-center text-sm md:text-base">
                     <div class="flex items-center gap-2 bg-gray-800 rounded px-2 py-1">
@@ -146,7 +184,7 @@
                         <input type="number" id="winnerCount" value="3" min="1" max="50" class="w-12 bg-transparent text-center focus:outline-none font-bold text-yellow-400 border-b border-gray-600">
                     </div>
                     <button id="setupBtn" onclick="toggleSetup()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded shadow transition flex items-center gap-1">
-                        ⚙️ <span class="hidden sm:inline">รายชื่อ</span>
+                        ⚙️ <span class="hidden sm:inline">ตั้งค่า/รายชื่อ</span>
                     </button>
                     <button id="startBtn" onclick="prepareAndStart()" class="bg-red-600 hover:bg-red-500 text-white px-5 py-1.5 rounded shadow font-bold transition transform hover:scale-105">
                         🚀 เริ่มแข่ง!
@@ -162,8 +200,8 @@
                 <div id="racersLayer" class="absolute inset-0 z-10">
                      <div class="flex flex-col items-center justify-center h-full w-screen text-gray-300 opacity-50 space-y-2 animate-pulse">
                         <div class="text-6xl">🏟️</div>
-                        <div class="text-2xl"></div>
-                        <div class="text-sm"></div>
+                        <div class="text-2xl" id="trackMessage">พร้อมสำหรับการแข่งขัน</div>
+                        <div class="text-sm">กดปุ่มเริ่มเพื่อทำการแข่งขัน</div>
                     </div>
                 </div>
                 <div id="finishLine" class="absolute top-0 bottom-0 w-4 finish-line z-0 shadow-lg hidden"></div>
@@ -188,18 +226,56 @@
 
     <!-- Modals -->
     <div id="setupModal" class="fixed inset-0 bg-black bg-opacity-80 z-50 hidden flex items-center justify-center backdrop-blur-sm">
-        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-lg shadow-2xl border border-gray-600 relative m-4">
-            <button onclick="toggleSetup()" class="absolute top-2 right-2 text-gray-400 hover:text-white text-xl">&times;</button>
-            <h2 class="text-xl font-bold mb-4 text-blue-400">📋 ตั้งค่าผู้เข้าแข่งขัน</h2>
-            <div class="bg-gray-700 p-3 rounded mb-4 flex items-center gap-2">
-                <span class="text-sm">สุ่มชื่อจำนวน:</span>
-                <input type="number" id="genAmount" value="100" class="w-20 px-2 py-1 text-black rounded text-center" min="1" max="1000">
-                <button onclick="generateData()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm transition">สร้างเลย</button>
+        <div class="bg-gray-800 p-6 rounded-lg w-full max-w-4xl shadow-2xl border border-gray-600 relative m-4 flex flex-col h-[90vh]">
+            <button onclick="toggleSetup()" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">&times;</button>
+            
+            <h2 class="text-xl font-bold mb-4 text-blue-400 flex items-center gap-2">
+                📋 ตั้งค่าผู้เข้าแข่งขัน
+            </h2>
+
+            <!-- Mode Switcher -->
+            <div class="flex bg-gray-700 p-1 rounded-lg mb-4 w-fit">
+                <button onclick="setMode('simple')" id="btnModeSimple" class="px-4 py-2 rounded-md text-sm font-medium transition-all tab-btn active">โหมดปกติ (1 รายชื่อ)</button>
+                <button onclick="setMode('group')" id="btnModeGroup" class="px-4 py-2 rounded-md text-sm font-medium transition-all tab-btn">โหมดแยกกลุ่ม (6 กลุ่ม)</button>
             </div>
-            <textarea id="nameList" class="w-full h-48 p-3 bg-gray-900 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none font-mono" placeholder="รายชื่อ..."></textarea>
-            <div class="flex justify-between items-center mt-4">
-                <span class="text-xs text-gray-500" id="lineCount">0 รายชื่อ</span>
-                <button onclick="toggleSetup()" class="bg-green-600 hover:bg-green-500 text-white px-6 py-2 rounded font-bold shadow-lg">บันทึกและปิด</button>
+
+            <!-- Simple Mode Input -->
+            <div id="simpleModeContainer" class="flex-1 flex flex-col min-h-0">
+                <div class="bg-gray-700 p-3 rounded mb-2 flex items-center gap-2">
+                    <span class="text-sm">สุ่มชื่อตัวอย่าง:</span>
+                    <input type="number" id="genAmount" value="50" class="w-20 px-2 py-1 text-black rounded text-center" min="1" max="1000">
+                    <button onclick="generateData()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-sm transition">สร้างเลย</button>
+                </div>
+                <textarea id="nameList" class="flex-1 w-full p-3 bg-gray-900 text-white text-sm rounded border border-gray-600 focus:border-blue-500 focus:outline-none resize-none font-mono" placeholder="ใส่ชื่อที่นี่ (บรรทัดละ 1 ชื่อ)..."></textarea>
+                <div class="text-right text-xs text-gray-400 mt-1" id="lineCountSimple">0 รายชื่อ</div>
+            </div>
+
+            <!-- Group Mode Input -->
+            <div id="groupModeContainer" class="flex-1 flex flex-col min-h-0 hidden">
+                <!-- Group Tabs -->
+                <div class="flex gap-2 overflow-x-auto pb-2 mb-2 border-b border-gray-700" id="groupTabs">
+                    <!-- JS will populate tabs -->
+                </div>
+                
+                <!-- Group Content -->
+                <div class="flex-1 relative bg-gray-900 rounded border border-gray-600">
+                     <textarea id="groupInputArea" class="absolute inset-0 w-full h-full p-3 bg-transparent text-white text-sm focus:outline-none resize-none font-mono"></textarea>
+                     <!-- Overlay for Group 1 (ReadOnly) -->
+                     <div id="group1Overlay" class="absolute inset-0 bg-gray-800 bg-opacity-90 flex flex-col items-center justify-center hidden pointer-events-none">
+                        <div class="text-4xl">🔒</div>
+                        <div class="text-xl font-bold mt-2">1. อสค (รวมทั้งหมด)</div>
+                        <div class="text-sm text-gray-400 mt-1">รายชื่อกลุ่มนี้เกิดจากการรวมกลุ่ม 2-6 อัตโนมัติ</div>
+                        <div class="text-lg text-yellow-400 mt-4" id="group1TotalDisplay">จำนวนรวม: 0 คน</div>
+                     </div>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                     <div class="text-xs text-yellow-500">* กลุ่ม 1 (อสค) จะรวมรายชื่อจากกลุ่ม 2-6 เสมอ</div>
+                     <div class="text-xs text-gray-400" id="groupCurrentCount">0 รายชื่อ</div>
+                </div>
+            </div>
+
+            <div class="flex justify-end items-center mt-4 pt-4 border-t border-gray-700">
+                <button onclick="saveAndCloseSetup()" class="bg-green-600 hover:bg-green-500 text-white px-8 py-2 rounded font-bold shadow-lg">บันทึกและปิด</button>
             </div>
         </div>
     </div>
@@ -207,6 +283,9 @@
     <div id="resultModal" class="absolute inset-0 z-50 hidden flex items-center justify-center pointer-events-none">
         <div class="bg-white text-gray-900 rounded-xl w-full max-w-md shadow-2xl transform scale-90 opacity-0 transition-all duration-300 pointer-events-auto border-4 border-yellow-400 overflow-hidden flex flex-col max-h-[80vh]">
             <div class="bg-red-600 text-white p-4 text-center font-bold text-2xl shadow-md">🏆 ผลการแข่งขัน</div>
+            <div class="bg-gray-100 px-4 py-2 text-center text-sm font-bold text-gray-600 border-b" id="resultSubtitle">
+                กลุ่ม: -
+            </div>
             <ul id="winnerList" class="flex-1 overflow-y-auto p-4 space-y-2 bg-gray-50 text-base"></ul>
             <div class="p-4 bg-gray-100 border-t flex flex-col gap-2">
                 <button onclick="nextRound()" class="bg-blue-600 hover:bg-blue-500 text-white text-lg px-6 py-3 rounded-lg font-bold shadow-lg transition hover:scale-105 flex items-center justify-center gap-2">
@@ -220,11 +299,9 @@
     </div>
 
 <script>
+    // --- Config & State ---
     const avatars = ['🐎', '🦄', '🐆', '🐅', '🦓', '🐕', '🐇', '🏇', '🚴', '🏎️', '🛵', '🏃', '🦖', '🐂'];
-    const colors = [
-        'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 
-        'bg-pink-500', 'bg-indigo-500', 'bg-teal-500', 'bg-orange-500', 'bg-cyan-500'
-    ];
+    const colors = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-teal-500'];
     const TRACK_MULTIPLIER = 4;
 
     let isRacing = false;
@@ -236,7 +313,32 @@
     let viewportWidth = 0;
     let viewportHeight = 0;
     let frameTick = 0;
+    
+    // Group Mode State
+    let currentMode = 'simple'; // 'simple' or 'group'
+    
+    // FIX: Set initial Active Group Tab to 0 (None) to prevent overwrite on first load
+    let activeGroupTab = 0; 
+    
+    // Data storage for groups 2-6
+    const groupData = {
+        2: [], // ส่วนกลางฝ่าย
+        3: [], // กปส-พ.
+        4: [], // กตส-พ.
+        5: [], // กสส-พ.
+        6: []  // กบร-พ.
+    };
+    
+    const groupConfig = {
+        1: { name: '1. อสค', color: 'bg-gray-600' },
+        2: { name: '2. ส่วนกลางฝ่าย', color: 'bg-red-600' },
+        3: { name: '3. กปส-พ.', color: 'bg-blue-600' },
+        4: { name: '4. กตส-พ.', color: 'bg-green-600' },
+        5: { name: '5. กสส-พ.', color: 'bg-yellow-600' },
+        6: { name: '6. กบร-พ.', color: 'bg-purple-600' }
+    };
 
+    // --- Elements ---
     const setupModal = document.getElementById('setupModal');
     const resultModal = document.getElementById('resultModal');
     const racersLayer = document.getElementById('racersLayer');
@@ -245,166 +347,285 @@
     const trackArea = document.getElementById('trackArea');
     const finishLine = document.getElementById('finishLine');
     const finishLabel = document.getElementById('finishLabel');
-    const nameListInput = document.getElementById('nameList');
     const startBtn = document.getElementById('startBtn');
     const distanceDisplay = document.getElementById('distanceDisplay');
     const racerCountDisplay = document.getElementById('racerCountDisplay');
-    const lineCountLabel = document.getElementById('lineCount');
     const countdownOverlay = document.getElementById('countdownOverlay');
     const countdownText = document.getElementById('countdownText');
+    const groupSelectorContainer = document.getElementById('groupSelectorContainer');
+    const simpleModeLabel = document.getElementById('simpleModeLabel');
+    const raceGroupSelect = document.getElementById('raceGroupSelect');
 
-    // --- Sound Manager (Web Audio API) ---
-    const SoundManager = {
-        ctx: null,
-        init: function() {
-            if (!this.ctx) {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            } else if (this.ctx.state === 'suspended') {
-                this.ctx.resume();
-            }
-        },
-        playTone: function(freq, type, duration, startTime = 0) {
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
-            gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(this.ctx.currentTime + startTime);
-            osc.stop(this.ctx.currentTime + startTime + duration);
-        },
-        playBeep: function(freq) {
-            if (!this.ctx) return;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-            osc.type = 'square';
-            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start();
-            osc.stop(this.ctx.currentTime + 0.1);
-        },
-        playVictory: function() {
-            this.init();
-            // Simple Arpeggio: C - E - G - C
-            const now = 0;
-            this.playTone(523.25, 'triangle', 0.2, now);
-            this.playTone(659.25, 'triangle', 0.2, now + 0.1);
-            this.playTone(783.99, 'triangle', 0.2, now + 0.2);
-            this.playTone(1046.50, 'square', 0.6, now + 0.3);
-        },
-        playFireworkPop: function() {
-            this.init();
-            const t = this.ctx.currentTime;
-            const osc = this.ctx.createOscillator();
-            const gain = this.ctx.createGain();
-            osc.frequency.setValueAtTime(100, t);
-            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
-            gain.gain.setValueAtTime(0.2, t);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-            osc.connect(gain);
-            gain.connect(this.ctx.destination);
-            osc.start(t);
-            osc.stop(t + 0.5);
-        }
-    };
+    // Input Elements
+    const nameListInput = document.getElementById('nameList'); // For simple mode
+    const groupInputArea = document.getElementById('groupInputArea'); // For group mode
+    const group1Overlay = document.getElementById('group1Overlay');
 
-    // --- Fireworks System ---
-    const fwCanvas = document.getElementById('fireworksCanvas');
-    const fwCtx = fwCanvas.getContext('2d');
-    let fwParticles = [];
-    let fwAnimationId;
+    // --- Initialization ---
+    initGroupTabs();
+    generateData(); // Gen simple data
+    
+    // Default Group Data for testing (Added more presets for verification)
+    groupData[2] = ["นายชัยยศ หาญอมร",
+"นางพรทิพย์  เอี่ยมสาย",
+"นายปกรณ์  ประดิษฐ์ทอง",
+"นางศิรินาถ  ศิริอักษร",
+"นางสาวศศิลักษณ์  ขำศิริ",
+"นางสาวจิตราภรณ์ สุขเกษม",
+"นางขวัญชนก  วิวัฒนานนท์",
+"นายภูริศร์ วิรยศิริ",
+"นางปัทมาภรณ์  สุขสำเนียง",
+"นางวัชราภรณ์  ศรีจันทร์",
+"นายณภัทร ดุรงค์พงษ์ธร",
+"นางจิดาภา  ชื่นชม",
+"นายสุรชัย อยู่ชมสุข",
+"นายนิกร เพ็งพรรณ์",
+"นายฉลอง ชำนาญสิงห์",
+"นายอภิรักษ์ บุญเป็ง",
+"นางสาวอาภัสรา  ศรีงามขำ",
+"นางสาวเบญจมาศ  ปานนพภา",
+"นางสาวนุสรา  สรวลสรรค์",
+"นายปิติภัทร  ปัญญาแก้ว",
+"นายญาณปรีชา  คำมาบุตร",
+"นายณรงค์รัตน์  สุนทรประทุม",
+"นางสาวพรรณทิพย์ แก้วผัด",
+"นางสาวศรินดา สังขทิพย์",
+"นางปราณี  อยู่ชมสุข",
+"นางสาวปาจรีย์  พันธุ์เพ็ง",
+"นายอนุชิต  กอสุนทร",
+"นายณรงค์ศักดิ์  มีพลัง",
+"นายธีรยุทธ์ เรืองหิรัญ",
+]; 
 
-    function resizeCanvas() {
-        fwCanvas.width = window.innerWidth;
-        fwCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    class FireworkParticle {
-        constructor(x, y, hue) {
-            this.x = x;
-            this.y = y;
-            this.hue = hue;
-            const angle = Math.random() * Math.PI * 2;
-            const velocity = Math.random() * 6 + 2;
-            this.vx = Math.cos(angle) * velocity;
-            this.vy = Math.sin(angle) * velocity;
-            this.alpha = 1;
-            this.decay = Math.random() * 0.015 + 0.015;
-            this.gravity = 0.1;
-        }
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += this.gravity;
-            this.alpha -= this.decay;
-            this.vx *= 0.96;
-            this.vy *= 0.96;
-        }
-        draw(ctx) {
-            ctx.save();
-            ctx.globalAlpha = this.alpha;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
-            ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`;
-            ctx.fill();
-            ctx.restore();
-        }
-    }
-
-    function createFirework() {
-        SoundManager.playFireworkPop();
-        const x = Math.random() * fwCanvas.width;
-        const y = Math.random() * (fwCanvas.height * 0.6) + (fwCanvas.height * 0.1);
-        const hue = Math.random() * 360;
-        const particleCount = 50;
-        for (let i = 0; i < particleCount; i++) {
-            fwParticles.push(new FireworkParticle(x, y, hue));
-        }
-    }
-
-    function animateFireworks() {
-        fwCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
-        fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
-        fwParticles = fwParticles.filter(p => p.alpha > 0);
-        fwParticles.forEach(p => {
-            p.update();
-            p.draw(fwCtx);
-        });
-        if (Math.random() < 0.05) {
-            createFirework();
-        }
-        fwAnimationId = requestAnimationFrame(animateFireworks);
-    }
-
-    function startFireworks() {
-        fwParticles = [];
-        fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
-        animateFireworks();
-        createFirework();
-        setTimeout(createFirework, 300);
-        setTimeout(createFirework, 600);
-    }
-
-    function stopFireworks() {
-        cancelAnimationFrame(fwAnimationId);
-        fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
-        fwParticles = [];
-    }
-
-
-    // --- Game Logic ---
-
-    generateData();
+    groupData[3] = ["นางพรศรินทร์  แหลมหลักสกุล",
+"นายจิตตกานต์  สินธุเสก",
+"นายเฉลิมวิทย์  ไกรขาว",
+"นางสาวศุทธินี  วราภรณ์",
+"นายดิสลักษณ์  อมราพิทักษ์",
+"นางสาวณิชยา  โรจน์เพ็ญเพียร",
+"นางสาวกมลกาญจน์  กิจวัทวรเวทย์",
+"นางสาวมาลีวัลย์ สรรพอุดม",
+"นายธิติภูมิ สิทธิวงศ์",
+"นางสาววลัยรัตน์ ปูผ้า",
+"นางสาวปภาพินท์ บางประสิทธิ์",
+"นางสาวกรปวีณ์  เหมกรณ์",
+"นางสาวธีตา อินทเสน",
+"นายเจตน์สิทธิ์  สำลีรัตน์",
+"นายปุถุชน ใบไม้",
+]; 
+    groupData[4] = ["นางอิศรา  ประวีณวรกุล",
+"นายวรศักดิ์  ยะกันมูล",
+"นางนพรัตน์  ทองพูล",
+"นางสาวนภัสวัณณ์ น้อยวงศ์",
+"นายเอกชัย  มาลาพล",
+"นางสาวพุทธิชา บุญชะตา",
+"นางสาวตรีวรัตม์ รุจิเกียรติโชค",
+"นายพงศ์นาท  ทวยเจริญ",
+"นางสาวมลนิรา  ธรรมเสรีกุล",
+"นายวรวุฒิ  ปุณฑริกพันธ์",
+"นางสาวอวิกา  นุ่มนวล",
+"นายจาตุรงค์ สัมฤทธิ์",
+"นางสาวพนิดา  ทาราช",
+"นายพุฒิภัทร กาญจโนมัย",
+"นายทรงเดช  คำเครื่อง",
+"นายคทาวุธ  มันตาดิลก",
+"นายอฒิชัย  ศรีมาลา",
+"นายณรงค์ศักดิ์  สระสม",
+"นายสมพจน์ อ่าวสมบัติกุล",
+"นายศุภบุศย์ ดำรงค์กิจการ",
+"นางสาวธนิตา  หมื่นวิชิต",
+"นายสุจริต  ภู่ภักดิ์",
+"นายอาทิตย์  สิงหา",
+"นายสุพรรณ  พึ่งญาติ",
+"นายกมลพัฒน์  ประพันธา",
+"นายพงศ์วิริยะ เชาวลิตร",
+"นายนัทธสิทธิ  ค้ำชู",
+"นายณฐชาดล ยิ้มสด",
+"นายทศพร  ทิพย์ทิมาพันธ์",
+"นางสาวดลฤทัย  ตันติวราภรณ์",
+"นายวราพล ชัยมณี",
+"นางสาวปรมัย  จัดภัย",
+"น.ส.วรรษมล ทองเอียด",
+"น.ส.กุลภรณ์ กลิ่นเจริญ",
+]; 
+    groupData[5] = ["นางสาวนิลภา  แพมณี",
+"นายวิษณุ ชูประยูร",
+"นายสุทธิ ยุวะสุต",
+"นายจักวัน  อธิปัญญา",
+"นางสาววรรณกนก พุทธรังษี",
+"นางลลิตา แสนสอน",
+"นายสุพัฒน์พิทย์ เทียนเกษม",
+"นายเหมือง  ชื่นมนุษย์",
+"นายเจษฎากร หอมกลิ่น",
+"นางสาวนันท์ชนก นุชมิตร",
+"นางสาวพรภัค  ธนะเศวต",
+"นางสาวธนัชพร สุขเสริม",
+"นายกฤตพัฒน์ แก่นประธูป",
+]; 
+    groupData[6] = ["นายภัควี  ศิลปานนท์",
+"น.ส.กุณชญา หินเธาว์",
+"นางพชรมน สุทธพินทุ",
+"นางสาวอรณิชา แก้วสงคราม",
+"นายวรพล สุขสำราญ",
+"นางสาวปวรรัตน์  ปฏิภาณวัฒน์",
+"น.ส.ชนกภัทร์ ดาราสุริยงค์",
+"น.ส.จณิสตา ทิยา",
+"น.ส.ญาติมา กังแฮ",
+"นางสาวชนัตตาภา  ศิรินาวิน",
+"นางสาวพรวิภา อุ่นโรจน์",
+"นายธนกฤต หาญณรงค์",
+"นายพนิต เทอดสุทธิรณภูมิ",
+"นางสาวอรุณลักษณ์ จิรธนภิญโญ",
+"นายชนสรณ์  โตชนาการ",
+"นางสาวฐนิกจลา สังข์ภิรมย์",
+"นายบัญฑูร  อินทิม",
+"นางสาวนิคริน  ปุยนุเคราะห์",
+]; 
+    
     updateLineCount();
     nameListInput.addEventListener('input', updateLineCount);
+    groupInputArea.addEventListener('input', () => {
+        saveCurrentTabToMemory();
+        updateGroupTabCount();
+    });
+
+    // --- Mode Switching ---
+    function setMode(mode) {
+        currentMode = mode;
+        const simpleCont = document.getElementById('simpleModeContainer');
+        const groupCont = document.getElementById('groupModeContainer');
+        const btnSimple = document.getElementById('btnModeSimple');
+        const btnGroup = document.getElementById('btnModeGroup');
+
+        if (mode === 'simple') {
+            simpleCont.classList.remove('hidden');
+            groupCont.classList.add('hidden');
+            btnSimple.classList.add('active');
+            btnGroup.classList.remove('active');
+            
+            groupSelectorContainer.classList.add('hidden');
+            simpleModeLabel.classList.remove('hidden');
+        } else {
+            simpleCont.classList.add('hidden');
+            groupCont.classList.remove('hidden');
+            btnSimple.classList.remove('active');
+            btnGroup.classList.add('active');
+            
+            groupSelectorContainer.classList.remove('hidden');
+            simpleModeLabel.classList.add('hidden');
+            
+            // Render first editable tab (2) if none selected or just switched
+            if (activeGroupTab === 0) {
+                 switchGroupTab(2);
+            } else {
+                 // Refresh current view
+                 switchGroupTab(activeGroupTab);
+            }
+        }
+    }
+
+    function initGroupTabs() {
+        const container = document.getElementById('groupTabs');
+        container.innerHTML = '';
+        
+        Object.keys(groupConfig).forEach(key => {
+            const btn = document.createElement('button');
+            // Initial render class
+            btn.className = `px-3 py-1 text-xs rounded whitespace-nowrap transition-colors border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-300`;
+            btn.innerText = groupConfig[key].name;
+            btn.dataset.group = key;
+            btn.onclick = () => switchGroupTab(parseInt(key));
+            container.appendChild(btn);
+        });
+    }
+
+    function switchGroupTab(groupId) {
+        // FIX: Save ONLY if we have a valid active group (not 0 or 1)
+        if (activeGroupTab !== 1 && activeGroupTab !== 0) {
+            saveCurrentTabToMemory();
+        }
+        
+        activeGroupTab = groupId;
+        
+        // Update UI Tabs
+        const tabs = document.getElementById('groupTabs').children;
+        for(let btn of tabs) {
+            if(parseInt(btn.dataset.group) === groupId) {
+                btn.className = `px-3 py-1 text-xs rounded whitespace-nowrap transition-colors border border-blue-500 bg-blue-600 text-white shadow`;
+            } else {
+                btn.className = `px-3 py-1 text-xs rounded whitespace-nowrap transition-colors border border-gray-600 bg-gray-800 hover:bg-gray-700 text-gray-300`;
+            }
+        }
+
+        // Update Content Area
+        if (groupId === 1) {
+            // Group 1 is read-only / aggregate
+            group1Overlay.classList.remove('hidden');
+            groupInputArea.disabled = true;
+            groupInputArea.value = ""; // Clear underneath
+            updateAggregateDisplay();
+        } else {
+            group1Overlay.classList.add('hidden');
+            groupInputArea.disabled = false;
+            // Load data from memory
+            groupInputArea.value = groupData[groupId].join('\n');
+            updateGroupTabCount();
+        }
+    }
+
+    function saveCurrentTabToMemory() {
+        // FIX: Guard against saving to invalid ID 0 or ReadOnly ID 1
+        if (activeGroupTab === 1 || activeGroupTab === 0) return;
+        
+        const text = groupInputArea.value;
+        const list = text.split('\n').map(n => n.trim()).filter(n => n !== "");
+        groupData[activeGroupTab] = list;
+    }
+
+    function updateGroupTabCount() {
+        if (activeGroupTab === 1 || activeGroupTab === 0) return;
+        const count = groupData[activeGroupTab].length;
+        document.getElementById('groupCurrentCount').innerText = `${groupConfig[activeGroupTab].name}: ${count} รายชื่อ`;
+    }
+
+    function updateAggregateDisplay() {
+        // Combine all lists
+        let total = 0;
+        for (let i = 2; i <= 6; i++) {
+            total += groupData[i].length;
+        }
+        document.getElementById('group1TotalDisplay').innerText = `จำนวนรวม: ${total} คน`;
+        document.getElementById('groupCurrentCount').innerText = `1. อสค: ${total} รายชื่อ (รวม)`;
+    }
+
+    function getCombinedGroup1List() {
+        let combined = [];
+        for (let i = 2; i <= 6; i++) {
+            combined = combined.concat(groupData[i]);
+        }
+        return combined;
+    }
+
+    function saveAndCloseSetup() {
+        if (currentMode === 'group') {
+             saveCurrentTabToMemory();
+        }
+        toggleSetup();
+        
+        // Update main screen racer count
+        let count = 0;
+        if (currentMode === 'simple') {
+            count = nameListInput.value.split('\n').filter(n=>n.trim()).length;
+        } else {
+             // Default view count (Active selection)
+             const sel = raceGroupSelect.value;
+             if (sel == 1) count = getCombinedGroup1List().length;
+             else count = groupData[sel].length;
+        }
+        racerCountDisplay.innerText = `ผู้เล่น: ${count} คน`;
+    }
+
+    // --- Standard Logic ---
 
     function toggleSetup() {
         if (isRacing) return;
@@ -412,6 +633,11 @@
     }
 
     function generateData() {
+        // Only for simple mode for now
+        if (currentMode !== 'simple') {
+            alert("ฟังก์ชั่นสุ่มชื่อใช้ได้เฉพาะโหมดปกติครับ (โหมดกลุ่มกรุณากรอกเอง)");
+            return;
+        }
         const count = parseInt(document.getElementById('genAmount').value) || 100;
         const dummyNames = [];
         for (let i = 1; i <= count; i++) {
@@ -423,7 +649,7 @@
 
     function updateLineCount() {
         const lines = nameListInput.value.split('\n').filter(n => n.trim()).length;
-        lineCountLabel.innerText = `${lines} รายชื่อ`;
+        document.getElementById('lineCountSimple').innerText = `${lines} รายชื่อ`;
         racerCountDisplay.innerText = `ผู้เล่น: ${lines} คน`;
     }
 
@@ -431,8 +657,29 @@
         if (isRacing) return;
         SoundManager.init();
 
-        const rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
-        if (rawNames.length === 0) { alert("ไม่เหลือรายชื่อผู้เข้าแข่งขันแล้ว!"); toggleSetup(); return; }
+        let rawNames = [];
+        let groupName = "";
+
+        if (currentMode === 'simple') {
+            rawNames = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n);
+            groupName = "โหมดปกติ";
+        } else {
+            // Group Mode Logic
+            const selectedGroupId = parseInt(raceGroupSelect.value);
+            groupName = groupConfig[selectedGroupId].name;
+            
+            if (selectedGroupId === 1) {
+                rawNames = getCombinedGroup1List();
+            } else {
+                rawNames = [...groupData[selectedGroupId]];
+            }
+        }
+
+        if (rawNames.length === 0) { 
+            alert(`ไม่มีรายชื่อในกลุ่ม "${groupName}" เลย!`); 
+            toggleSetup(); 
+            return; 
+        }
 
         targetWinners = Math.min(parseInt(document.getElementById('winnerCount').value), rawNames.length);
 
@@ -440,13 +687,18 @@
         viewportHeight = trackArea.clientHeight;
         finishLineX = viewportWidth * TRACK_MULTIPLIER;
 
+        // Update UI (with null check to fix error)
+        const trackMsg = document.getElementById('trackMessage');
+        if (trackMsg) {
+            trackMsg.innerText = `กำลังแข่ง: ${groupName}`;
+        }
+
         setupTrack(rawNames);
         
         startBtn.disabled = true;
         startBtn.classList.add('opacity-50', 'cursor-not-allowed');
         startBtn.innerText = "เตรียมตัว...";
         
-        // Start Countdown Sequence instead of starting directly
         startCountdown();
     }
 
@@ -455,25 +707,22 @@
         countdownOverlay.classList.remove('hidden');
         
         const runStep = () => {
-            // Remove animation class to reset
             countdownText.classList.remove('animate-pop');
-            void countdownText.offsetWidth; // Trigger reflow
+            void countdownText.offsetWidth; 
 
             if (count > 0) {
                 countdownText.innerText = count;
                 countdownText.style.color = 'white';
-                SoundManager.playBeep(440); // Low beep
+                SoundManager.playBeep(440);
             } else {
                 countdownText.innerText = "GO!";
-                countdownText.style.color = '#fbbf24'; // Yellow
-                SoundManager.playBeep(880); // High beep
+                countdownText.style.color = '#fbbf24';
+                SoundManager.playBeep(880);
             }
             
-            // Add animation class
             countdownText.classList.add('animate-pop');
 
             if (count === 0) {
-                // End countdown
                 setTimeout(() => {
                     countdownOverlay.classList.add('hidden');
                     isRacing = true;
@@ -502,25 +751,18 @@
         finishLabel.style.display = 'block';
         finishLabel.style.left = `${finishLineX - 40}px`;
 
+        // Create Markers
         for (let i = 1; i <= 9; i++) {
             const leftPos = finishLineX * (i / 10);
             const line = document.createElement('div');
             line.className = 'absolute top-0 bottom-0 border-l-2 border-dashed border-white border-opacity-20 pointer-events-none';
             line.style.left = `${leftPos}px`;
-            
             const labelTop = document.createElement('div');
             labelTop.className = 'absolute top-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
             labelTop.style.left = `${leftPos}px`;
             labelTop.innerText = `${i * 10}M`;
-
-            const labelBottom = document.createElement('div');
-            labelBottom.className = 'absolute bottom-4 text-white text-opacity-40 font-bold text-xl transform -translate-x-1/2 pointer-events-none font-mono';
-            labelBottom.style.left = `${leftPos}px`;
-            labelBottom.innerText = `${i * 10}M`;
-
             markersLayer.appendChild(line);
             markersLayer.appendChild(labelTop);
-            markersLayer.appendChild(labelBottom);
         }
 
         const totalRacers = names.length;
@@ -586,8 +828,7 @@
     }
 
     function startRaceLoop() {
-        let prevLeaderPosition = 0; // Track leader for Catch-up logic
-
+        let prevLeaderPosition = 0; 
         raceInterval = setInterval(() => {
             frameTick++;
             let activeCount = 0;
@@ -607,33 +848,24 @@
                 
                 activeCount++;
 
-                // --- AI Logic & Rubber Banding ---
                 const distToLeader = prevLeaderPosition - racer.position;
 
                 if (Math.random() < racer.aggression) {
                     const progress = racer.position / finishLineX;
                     const fatigue = Math.random() > 0.7 ? 0.5 : 1;
                     const sprintBonus = (progress > 0.8) ? 1.5 : 1;
-                    
-                    // Rubber Banding: Catch-up Bonus
                     let catchUpBonus = 1;
-                    // Logic to tighten the pack when few racers remain
                     const isFewRacers = racers.length <= 20; 
 
                     if (distToLeader > 0) {
-                        // Trailing: Boost speed based on distance
                         if (isFewRacers) {
-                             // Stronger rubber band for small groups
                              catchUpBonus = 1 + (distToLeader / 1500); 
-                             if (distToLeader > viewportWidth * 0.25) catchUpBonus += 0.4; // Boost earlier
+                             if (distToLeader > viewportWidth * 0.25) catchUpBonus += 0.4; 
                         } else {
-                             // Standard rubber band
                              catchUpBonus = 1 + (distToLeader / 3000); 
                              if (distToLeader > viewportWidth) catchUpBonus += 0.3; 
                         }
                     } else {
-                        // Leading: Slight penalty to keep race tight
-                        // Higher penalty for small groups to allow overtaking
                         catchUpBonus = isFewRacers ? 0.85 : 0.95; 
                     }
 
@@ -656,7 +888,6 @@
                 const jumpY = Math.abs(Math.sin(racer.wobble)) * -3;
                 racer.element.style.transform = `translate(${racer.position}px, ${jumpY}px)`;
 
-                // Proximity Check for Name Tags
                 if (shouldCheckProximity && racers.length > 30) {
                     let isIsolated = true;
                     const myX = racer.position;
@@ -697,10 +928,8 @@
                 currentFrameLeaderPos = Math.max(currentFrameLeaderPos, racer.position);
             });
 
-            // Update Global Leader Position for next frame's calculations
             prevLeaderPosition = currentFrameLeaderPos;
 
-            // Camera follow
             let cameraX = prevLeaderPosition - (viewportWidth * 0.6);
             if (cameraX < 0) cameraX = 0;
             if (cameraX > finishLineX - viewportWidth + 100) { 
@@ -725,12 +954,17 @@
         startBtn.disabled = false;
         startBtn.classList.remove('opacity-50', 'cursor-not-allowed');
         startBtn.innerText = "🚀 เริ่มแข่งใหม่";
-
-        // Play Victory Sound
         SoundManager.playVictory();
-        
-        // Start Fireworks
         startFireworks();
+
+        // Update Modal Subtitle
+        let subtitle = "";
+        if (currentMode === 'simple') subtitle = "โหมดปกติ";
+        else {
+            const gid = raceGroupSelect.value;
+            subtitle = `กลุ่ม: ${groupConfig[gid].name}`;
+        }
+        document.getElementById('resultSubtitle').innerText = subtitle;
 
         const list = document.getElementById('winnerList');
         list.innerHTML = '';
@@ -751,38 +985,185 @@
     }
 
     function nextRound() {
-        const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
         const winnerNames = winners.map(w => w.name);
-        const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
-        
-        if (nextRoundList.length === 0) {
-            alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขัน)");
-            closeResult();
-            nameListInput.value = "";
+
+        if (currentMode === 'simple') {
+            const currentList = nameListInput.value.split('\n').map(n => n.trim()).filter(n => n !== "");
+            const nextRoundList = currentList.filter(name => !winnerNames.includes(name));
+            if (nextRoundList.length === 0) {
+                alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขัน)");
+                closeResult();
+                nameListInput.value = "";
+                updateLineCount();
+                return;
+            }
+            nameListInput.value = nextRoundList.join('\n');
             updateLineCount();
-            return;
+        } else {
+            // Group Mode Elimination
+            // Remove winners from ALL groups they appear in (Groups 2-6)
+            // Even if racing Group 1 (All), we must remove from origin groups
+            let removedCount = 0;
+            let remainingTotal = 0;
+
+            for (let i = 2; i <= 6; i++) {
+                const originalLen = groupData[i].length;
+                groupData[i] = groupData[i].filter(name => !winnerNames.includes(name));
+                if (groupData[i].length < originalLen) removedCount++;
+                remainingTotal += groupData[i].length;
+            }
+
+            if (remainingTotal === 0) {
+                alert("จบการแข่งขันแล้ว! (ไม่เหลือผู้เข้าแข่งขันในทุกกลุ่ม)");
+                closeResult();
+                updateAggregateDisplay(); // Refresh UI count
+                racerCountDisplay.innerText = "ผู้เล่น: 0 คน";
+                return;
+            }
         }
 
-        nameListInput.value = nextRoundList.join('\n');
-        updateLineCount();
+        // Refresh Racer Count on UI for next race
+        let nextRaceCount = 0;
+        if(currentMode === 'simple') {
+            nextRaceCount = nameListInput.value.split('\n').filter(n=>n.trim()).length;
+        } else {
+            const sel = raceGroupSelect.value;
+            if (sel == 1) nextRaceCount = getCombinedGroup1List().length;
+            else nextRaceCount = groupData[sel].length;
+        }
+        racerCountDisplay.innerText = `ผู้เล่น: ${nextRaceCount} คน`;
+
         startBtn.innerText = "🚀 เริ่มรอบถัดไป";
         closeResult();
     }
 
     function closeResult() {
-        stopFireworks(); // Stop fireworks
+        stopFireworks();
         const modal = document.getElementById('resultModal');
         modal.querySelector('div').classList.remove('scale-100', 'opacity-100');
         modal.querySelector('div').classList.add('scale-90', 'opacity-0');
         setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    window.addEventListener('resize', () => {
-        if(!isRacing && trackArea.clientWidth) {
-            viewportWidth = trackArea.clientWidth;
-            viewportHeight = trackArea.clientHeight;
+    // --- Sound Manager ---
+    const SoundManager = {
+        ctx: null,
+        init: function() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            } else if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        playTone: function(freq, type, duration, startTime = 0) {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime + startTime);
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime + startTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + startTime + duration);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(this.ctx.currentTime + startTime);
+            osc.stop(this.ctx.currentTime + startTime + duration);
+        },
+        playBeep: function(freq) {
+            if (!this.ctx) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+            osc.type = 'square';
+            gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start();
+            osc.stop(this.ctx.currentTime + 0.1);
+        },
+        playVictory: function() {
+            this.init();
+            const now = 0;
+            this.playTone(523.25, 'triangle', 0.2, now);
+            this.playTone(659.25, 'triangle', 0.2, now + 0.1);
+            this.playTone(783.99, 'triangle', 0.2, now + 0.2);
+            this.playTone(1046.50, 'square', 0.6, now + 0.3);
+        },
+        playFireworkPop: function() {
+            this.init();
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.frequency.setValueAtTime(100, t);
+            osc.frequency.exponentialRampToValueAtTime(0.01, t + 0.5);
+            gain.gain.setValueAtTime(0.2, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.5);
         }
-    });
+    };
+
+    // --- Fireworks ---
+    const fwCanvas = document.getElementById('fireworksCanvas');
+    const fwCtx = fwCanvas.getContext('2d');
+    let fwParticles = [];
+    let fwAnimationId;
+
+    function resizeCanvas() {
+        fwCanvas.width = window.innerWidth;
+        fwCanvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class FireworkParticle {
+        constructor(x, y, hue) {
+            this.x = x; y = y; this.hue = hue;
+            const angle = Math.random() * Math.PI * 2;
+            const velocity = Math.random() * 6 + 2;
+            this.vx = Math.cos(angle) * velocity;
+            this.vy = Math.sin(angle) * velocity;
+            this.alpha = 1; this.decay = Math.random() * 0.015 + 0.015; this.gravity = 0.1;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy; this.vy += this.gravity;
+            this.alpha -= this.decay; this.vx *= 0.96; this.vy *= 0.96;
+        }
+        draw(ctx) {
+            ctx.save(); ctx.globalAlpha = this.alpha; ctx.beginPath();
+            ctx.arc(this.x, this.y, 3, 0, Math.PI * 2);
+            ctx.fillStyle = `hsl(${this.hue}, 100%, 50%)`; ctx.fill(); ctx.restore();
+        }
+    }
+
+    function createFirework() {
+        SoundManager.playFireworkPop();
+        const x = Math.random() * fwCanvas.width;
+        const y = Math.random() * (fwCanvas.height * 0.6) + (fwCanvas.height * 0.1);
+        const hue = Math.random() * 360;
+        for (let i = 0; i < 50; i++) fwParticles.push(new FireworkParticle(x, y, hue));
+    }
+
+    function animateFireworks() {
+        fwCtx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        fwCtx.fillRect(0, 0, fwCanvas.width, fwCanvas.height);
+        fwParticles = fwParticles.filter(p => p.alpha > 0);
+        fwParticles.forEach(p => { p.update(); p.draw(fwCtx); });
+        if (Math.random() < 0.05) createFirework();
+        fwAnimationId = requestAnimationFrame(animateFireworks);
+    }
+
+    function startFireworks() {
+        fwParticles = []; fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+        animateFireworks(); createFirework();
+        setTimeout(createFirework, 300); setTimeout(createFirework, 600);
+    }
+
+    function stopFireworks() {
+        cancelAnimationFrame(fwAnimationId); fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height); fwParticles = [];
+    }
 
 </script>
 </body>
